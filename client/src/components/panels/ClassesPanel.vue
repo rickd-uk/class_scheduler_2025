@@ -103,8 +103,8 @@ const newClass = reactive({
 });
 
 // State for controlling the (not yet implemented) linking modal
-const showLinkModal = ref(false);
-const selectedClassForLinking = ref(null);
+// const showLinkModal = ref(false); // Commented out as modal is global
+// const selectedClassForLinking = ref(null); // Commented out as modal is global
 
 
 // --- Store State ---
@@ -185,34 +185,36 @@ const handleDeleteClass = async (id) => {
 
 // --- Linking/Unlinking Methods ---
 
-// Placeholder function for opening the Link Textbook modal
+// Opens the LinkTextbookModal
 const openLinkModal = (cls) => {
-    console.log("Opening link modal for class:", cls);
-    selectedClassForLinking.value = cls; // Store the class data for the modal
-    // showLinkModal.value = true; // This line would activate the modal component
-    alert(`Link functionality for Year ${cls.yearLevel} - Class ${cls.classNumber} not fully implemented yet.`);
-    // TODO: Implement a modal component (e.g., LinkTextbookModal.vue)
-    // This modal would need to:
-    // - Receive `selectedClassForLinking` as a prop.
-    // - Fetch the full list of available textbooks (from `textbooks` store module).
-    // - Display available textbooks (perhaps filtering out already linked ones).
-    // - Allow user to select one or more textbooks.
-    // - On save, dispatch the `classes/linkTextbook` action with classId and selected textbookId(s).
-    // - Emit a 'close' event.
+    console.log("[ClassesPanel] openLinkModal called with class:", cls); // Log 1
+    try {
+        console.log("[ClassesPanel] Attempting to dispatch ui/openModal..."); // Log 2
+        // Dispatch action to open the modal and pass the class data
+        store.dispatch('ui/openModal', {
+            modalName: 'linkTextbookModal', // Matches the key in the UI store state
+            data: cls // Pass the whole class object (includes already linked textbooks)
+        });
+         console.log("[ClassesPanel] Dispatch ui/openModal completed (no error thrown)."); // Log 3
+    } catch (error) {
+        // This catch block might not catch errors within async dispatch if not awaited
+        console.error("[ClassesPanel] Error occurred during dispatch:", error); // Log 4
+    }
 };
 
-// Placeholder function to close the Link Textbook modal
-const closeLinkModal = () => {
-    showLinkModal.value = false;
-    selectedClassForLinking.value = null;
-};
+// Placeholder function to close the Link Textbook modal (Not needed here as modal is global)
+// const closeLinkModal = () => {
+//     showLinkModal.value = false;
+//     selectedClassForLinking.value = null;
+// };
 
 // Handles clicking the unlink ('x') button next to a linked textbook
 const handleUnlinkTextbook = async (classId, textbookId) => {
-    // Show confirmation dialog
-    if (!confirm(`Are you sure you want to unlink this textbook from this class?`)) {
-        return; // Stop if user cancels
-    }
+    // --- Temporarily comment out confirmation ---
+    // if (!confirm(`Are you sure you want to unlink this textbook from this class?`)) {
+    //     return; // Stop if user cancels
+    // }
+    // --- End temporary comment ---
 
     // Set loading state for the specific unlink button
     unlinkingTextbookInfo.value = { classId, textbookId };
