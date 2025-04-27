@@ -1,3 +1,4 @@
+<!-- client/src/components/panels/ClassesPanel.vue -->
 <template>
   <div class="panel classes-panel">
     <div class="panel-header">

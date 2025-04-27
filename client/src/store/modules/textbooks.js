@@ -1,3 +1,4 @@
+// client/src/store/modules/textbooks.js
 import TextbooksService from '../../services/TextbooksService'; // Use the actual service
 
 export default {

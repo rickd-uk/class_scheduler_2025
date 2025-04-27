@@ -120,24 +120,32 @@ const handleEditClick = (book) => {
 
 // Handles clicking the delete button for a textbook
 const handleDeleteTextbook = async (id) => {
-    // Show confirmation dialog to the user
-    if (!confirm('Are you sure you want to delete this textbook?')) {
-        return; // Stop if user cancels
-    }
+    console.log(`[TextbooksPanel] handleDeleteTextbook called for ID: ${id}`); // <-- Log 1
+    // --- Temporarily comment out the confirmation ---
+    // if (!confirm('Are you sure you want to delete this textbook?')) {
+    //     console.log(`[TextbooksPanel] Deletion cancelled by user for ID: ${id}`); // <-- Log 2 (if cancelled)
+    //     return; // Stop if user cancels
+    // }
+    // console.log(`[TextbooksPanel] Deletion confirmed (or bypassed) for ID: ${id}. Proceeding...`); // <-- Log 3 (if confirmed/bypassed)
+    // --- End temporary comment ---
 
     // Set loading state for the specific delete button being clicked
     deletingTextbookId.value = id;
     deleteError.value = null; // Clear previous delete errors
 
     try {
+        console.log(`[TextbooksPanel] Dispatching textbooks/deleteTextbook for ID: ${id}`); // <-- Log 4
         // Dispatch action to delete the textbook via API
         await store.dispatch('textbooks/deleteTextbook', id);
+        console.log(`[TextbooksPanel] Dispatch successful for ID: ${id}`); // <-- Log 5
         // Textbook is removed from the list reactively by the store mutation
     } catch (error) {
+        console.error(`[TextbooksPanel] Error during delete dispatch for ID: ${id}`, error); // <-- Log 6 (if error)
         // Set error message and show an alert if deleting fails
         deleteError.value = error.message || "Failed to delete textbook.";
         alert(`Error: ${deleteError.value}`); // Using simple alert for now
     } finally {
+        console.log(`[TextbooksPanel] Resetting delete state for ID: ${id}`); // <-- Log 7
         // Reset the loading state for the delete button
         deletingTextbookId.value = null;
     }

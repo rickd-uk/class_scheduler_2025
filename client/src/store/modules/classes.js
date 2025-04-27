@@ -1,3 +1,4 @@
+// client/src/store/modules/classes.js
 import ClassesService from '../../services/ClassesService'; // Use the actual service
 
 export default {

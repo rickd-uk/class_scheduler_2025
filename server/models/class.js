@@ -10,11 +10,21 @@ module.exports = (sequelize, DataTypes) => {
      * The `models/index` file will call this method automatically.
      */
     static associate(models) {
-      // define association here
+      // Association to the User who owns the class
       Class.belongsTo(models.User, {
         foreignKey: 'userId',
         as: 'teacher' // Optional alias
       });
+
+      // --- Add this association ---
+      // Define association here: A Class can belong to many Textbooks through ClassTextbooks
+      Class.belongsToMany(models.Textbook, {
+        through: 'ClassTextbooks', // The name of the join table
+        foreignKey: 'classId',      // The foreign key in the join table that points to Classes
+        otherKey: 'textbookId',     // The foreign key in the join table that points to Textbooks
+        as: 'textbooks'             // Explicit alias matching the include in classRoutes.js
+      });
+      // --- End added association ---
     }
   }
   Class.init({
