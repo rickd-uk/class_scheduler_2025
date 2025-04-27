@@ -39,6 +39,7 @@ watch(modalData, (newData) => {
 
 
 const closeModal = () => {
+  console.log(`[${modalName}] closeModal method called.`); // <-- Add log
   store.dispatch('ui/closeModal', modalName);
 };
 

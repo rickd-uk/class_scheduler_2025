@@ -1,3 +1,4 @@
+// client/src/store/modules/auth.js
 import AuthService from '../../services/AuthService'
 import router from '../../router' // Import router for programmatic navigation
 import ApiService from '../../services/ApiService'; // Import ApiService to potentially set headers

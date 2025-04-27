@@ -1,3 +1,4 @@
+// --- client/src/App.vue ---
 <template>
   <div class="teacher-scheduler">
     <nav class="navbar">
@@ -21,7 +22,6 @@
               <DaysOffPanel />
             </div>
           </div>
-
           <div class="right-column">
             <div class="schedule-tabs">
               <button
@@ -40,10 +40,9 @@
                 Daily Schedule
               </button>
             </div>
-
             <div class="schedule-view">
               <component :is="activeComponent" />
-              </div>
+            </div>
           </div>
         </div>
       </template>
@@ -53,17 +52,18 @@
         <RegisterForm v-else @toggle="showLogin = !showLogin" />
       </div>
     </main>
-
-    <TemplateEditorModal v-if="modals.templateEditor" />
-    <DailyExceptionModal v-if="modals.dailyException" />
-    <WeeklyScheduleModal v-if="modals.weeklySchedule" />
-  </div>
+    <TemplateEditorModal v-if="store.state.ui.modals.templateEditor" />
+    <DailyExceptionModal v-if="store.state.ui.modals.dailyException" />
+    <WeeklyScheduleModal v-if="store.state.ui.modals.weeklySchedule" />
+    <TextbookEditorModal v-if="store.state.ui.modals.textbookEditor" />
+    </div>
 </template>
 
 <script setup>
+// --- Imports ---
 import { computed, ref, watch, shallowRef, markRaw } from 'vue'
 import { useStore } from 'vuex'
-import { useRouter } from 'vue-router' // Import useRouter for redirect after logout
+import { useRouter } from 'vue-router'
 
 // Panel Imports
 import TextbooksPanel from './components/panels/TextbooksPanel.vue'
@@ -78,110 +78,108 @@ import DailySchedulePanel from './components/panels/DailySchedulePanel.vue'
 import TemplateEditorModal from './components/modals/TemplateEditorModal.vue'
 import DailyExceptionModal from './components/modals/DailyExceptionModal.vue'
 import WeeklyScheduleModal from './components/modals/WeeklyScheduleModal.vue'
+// Import the new edit modal
+import TextbookEditorModal from './components/modals/TextbookEditorModal.vue'
+// Remove import for TextbookFormModal if using separate edit modal
+// import TextbookFormModal from './components/modals/TextbookFormModal.vue'
 
 // Auth Imports
 import LoginForm from './components/auth/LoginForm.vue'
 import RegisterForm from './components/auth/RegisterForm.vue'
 
+// --- Store and Router ---
 const store = useStore()
-const router = useRouter() // Initialize router
+const router = useRouter()
 
-const activeTab = ref('weekly') // Default tab
-const showLogin = ref(true) // Show login form by default
 
-// Authentication status and user data
+// --- Add this watcher ---
+watch(() => store.state.ui.modals.textbookEditor, (newValue, oldValue) => {
+  console.log(`[App.vue Watcher] textbookEditor modal state changed from ${oldValue} to ${newValue}`);
+});
+
+// --- Component State ---
+const activeTab = ref('weekly') // Default schedule view tab
+const showLogin = ref(true) // Show login form initially if not authenticated
+
+// --- Computed Properties ---
 const isAuthenticated = computed(() => store.getters['auth/isAuthenticated'])
 const user = computed(() => store.getters['auth/currentUser'])
+// Helper computed to check if a specific modal is open using the UI store getter
+const isModalOpen = (modalName) => computed(() => store.getters['ui/isModalOpen'](modalName))
 
-// Modal visibility state
-const modals = computed(() => store.state.ui.modals)
-
-// Dynamically load the active schedule panel component
+// --- Dynamic Component Loading for Schedule Tabs ---
 const activeComponent = shallowRef(WeeklySchedulePanel) // Default component
-const componentsMap = markRaw({
+const componentsMap = markRaw({ // Map tab names to component imports
   templates: TemplatesPanel,
   weekly: WeeklySchedulePanel,
   daily: DailySchedulePanel
 })
 
+// Watch for changes in the active tab and update the component to display
 watch(activeTab, (newTab) => {
   activeComponent.value = componentsMap[newTab] || WeeklySchedulePanel
 })
 
-
-// Function to load initial data for authenticated users
+// --- Initial Data Loading ---
+// Function to load necessary data when user is authenticated
 const loadInitialData = () => {
   if (isAuthenticated.value) {
     console.log("User authenticated, loading initial data...");
-    store.dispatch('textbooks/fetchTextbooks')
-    store.dispatch('classes/fetchClasses')
-    store.dispatch('templates/fetchTemplates')
-    store.dispatch('schedule/fetchRegularSchedule')
-    store.dispatch('schoolYear/fetchSchoolYear')
-    store.dispatch('daysOff/fetchDaysOff')
+    // Dispatch actions to fetch data - these check internally if data already exists or needs fetching
+    store.dispatch('textbooks/fetchTextbooks');
+    store.dispatch('classes/fetchClasses');
+    store.dispatch('templates/fetchTemplates');
+    store.dispatch('schedule/fetchRegularSchedule');
+    store.dispatch('schoolYear/fetchSchoolYear');
+    store.dispatch('daysOff/fetchDaysOff');
     // Set initial active component based on default tab
     activeComponent.value = componentsMap[activeTab.value] || WeeklySchedulePanel;
   } else {
      console.log("User not authenticated.");
-     // Reset potentially sensitive state if needed
+     // Reset potentially sensitive state if needed when user is not logged in
      activeTab.value = 'weekly'; // Reset tab
-     activeComponent.value = null; // Or set to a default non-auth component if needed
+     activeComponent.value = null; // Clear active schedule component
   }
 }
 
-// Watch for changes in authentication status
+// --- Watch Authentication Status ---
+// Watch for changes in authentication status (login/logout)
 watch(isAuthenticated, (newValue, oldValue) => {
   console.log(`Authentication status changed: ${oldValue} -> ${newValue}`);
   if (newValue) {
+    // If user logs in, load initial data
     loadInitialData();
-    // If user just logged in, router guard should handle redirect
-    // but ensure data is loaded if App component remounts or logic requires it
   } else {
-    // User logged out, App.vue might re-render or stay mounted
-    // Reset state handled within the template (v-if/v-else)
-    // The router guard will handle redirecting away from protected routes
-    // We might want to clear sensitive data from the store here
-    // e.g., store.dispatch('clearSensitiveData')
+    // If user logs out
     activeComponent.value = null; // Ensure no authenticated component tries to render
     showLogin.value = true; // Ensure login form shows if user logs out
   }
 }, { immediate: true }); // Use immediate: true to run the watcher on component mount
 
-
-// Logout handler
+// --- Logout Handler ---
 const handleLogout = async () => {
   try {
-    await store.dispatch('auth/logout')
-    // No need to manually push to /login here if the router guard is setup correctly.
-    // The guard will detect the unauthenticated state on the next navigation attempt
-    // or if the current route requires auth.
-    // However, if you want an immediate redirect regardless of current route:
-    // router.push({ name: 'login' });
+    await store.dispatch('auth/logout');
     console.log('Logout successful');
   } catch (error) {
-    console.error('Logout failed:', error)
-    // Handle logout error (e.g., show notification)
+    console.error('Logout failed:', error);
   }
 }
-
 </script>
 
 <style scoped>
-/* Add component-specific styles if needed */
-/* For example, styles specific to the layout within App.vue */
+/* Component-specific styles for App.vue layout */
 .navbar-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
-
 .user-menu {
   display: flex;
   align-items: center;
   gap: 1rem;
   font-size: 0.9rem;
 }
-
 .btn-logout {
   background-color: rgba(255, 255, 255, 0.2);
   color: white;
@@ -193,7 +191,6 @@ const handleLogout = async () => {
   font-weight: 500;
   transition: background-color 0.2s ease;
 }
-
 .btn-logout:hover {
   background-color: rgba(255, 255, 255, 0.3);
 }

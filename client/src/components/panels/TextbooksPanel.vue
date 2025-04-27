@@ -64,9 +64,7 @@ const newTextbook = reactive({ // Reactive object for the add form data
     title: '',
     description: ''
 });
-// State for editing (to be used with a modal or inline form later)
-const editingTextbook = ref(null); // Stores the textbook being edited
-const showEditForm = ref(false); // Controls visibility of the edit form/modal
+// Note: editingTextbook and showEditForm refs removed as modal handles its own state
 
 // --- Store State ---
 // Computed properties to get data from the Vuex store reactively
@@ -110,17 +108,14 @@ const handleAddTextbook = async () => {
     }
 };
 
-// Placeholder function for when the Edit button is clicked
+// Method to open the edit modal
 const handleEditClick = (book) => {
-    console.log("Attempting to edit textbook:", book);
-    // In a real implementation, you would typically:
-    // 1. Set the 'editingTextbook' state with a copy of the book data
-    //    editingTextbook.value = { ...book };
-    // 2. Open an edit modal or show an inline edit form
-    //    showEditForm.value = true;
-    //    // or dispatch an action to open a global modal:
-    //    // store.dispatch('ui/openModal', { modalName: 'textbookEditor', data: { ...book } });
-    alert("Edit functionality not yet implemented."); // Placeholder alert
+    console.log("Opening edit modal for textbook:", book);
+    // Dispatch action to open the modal and pass the textbook data
+    store.dispatch('ui/openModal', {
+        modalName: 'textbookEditor', // Use the modal name defined in ui.js
+        data: book // Pass the textbook object (action will deep copy)
+    });
 };
 
 // Handles clicking the delete button for a textbook

@@ -5,17 +5,18 @@ export default {
     modals: {
       templateEditor: false,
       dailyException: false,
-      weeklySchedule: false
-      // Add other modals here if needed
-      // textbookEditor: false,
+      weeklySchedule: false,
+      textbookEditor: false, // State for the textbook editor modal
+      // textbookFormModal: false // Remove if using separate edit modal
       // classEditor: false,
     },
     // Data to pass to modals when opened
     modalData: {
       templateEditor: null,
       dailyException: null,
-      weeklySchedule: null
-      // textbookEditor: null,
+      weeklySchedule: null,
+      textbookEditor: null, // State for textbook editor data
+      // textbookFormModal: null // Remove if using separate edit modal
       // classEditor: null,
     },
     isLoading: false, // General UI loading state (e.g., for full page overlays)
@@ -33,13 +34,15 @@ export default {
     },
 
     CLOSE_MODAL(state, modalName) {
-      if (state.modals.hasOwnProperty(modalName)) {
-        state.modals[modalName] = false;
-        state.modalData[modalName] = null; // Clear data when modal closes
-      } else {
-        console.warn(`Modal "${modalName}" does not exist in UI store state.`);
-      }
-    },
+    console.log(`[UI Store Mutation] CLOSE_MODAL for: ${modalName}. Current state: ${state.modals[modalName]}`); // <-- Add log
+    if (state.modals.hasOwnProperty(modalName)) {
+      state.modals[modalName] = false;
+      state.modalData[modalName] = null;
+      console.log(`[UI Store Mutation] State for ${modalName} set to: ${state.modals[modalName]}`); // <-- Add log
+    } else {
+      console.warn(`Modal "${modalName}" does not exist in UI store state.`);
+    }
+  },
 
     SET_LOADING(state, isLoading) {
       state.isLoading = isLoading;
@@ -52,27 +55,20 @@ export default {
     CLEAR_NOTIFICATION(state) {
       state.notification = null;
     }
-
-    // --- Deprecated / Renamed ---
-    // Use SET_MODAL_DATA combined with OPEN_MODAL instead
-    // SET_TEMPLATE_EDIT_DATA(state, data) {
-    //   state.templateEditData = data
-    // },
-    // SET_EXCEPTION_EDIT_DATA(state, data) {
-    //   state.exceptionEditData = data
-    // }
-    // --- End Deprecated ---
   },
 
   actions: {
     // Pass modal name and optional data payload
     openModal({ commit }, { modalName, data = null }) {
-      commit('OPEN_MODAL', { modalName, data });
+      // Important: Pass a deep copy of the data to avoid modifying original state directly
+      const dataCopy = data ? JSON.parse(JSON.stringify(data)) : null;
+      commit('OPEN_MODAL', { modalName, data: dataCopy });
     },
 
-    closeModal({ commit }, modalName) {
-      commit('CLOSE_MODAL', modalName);
-    },
+   closeModal({ commit }, modalName) {
+    console.log(`[UI Store Action] closeModal called for: ${modalName}`); // <-- Add log
+    commit('CLOSE_MODAL', modalName);
+},
 
     setLoading({ commit }, isLoading) {
       commit('SET_LOADING', isLoading);
@@ -91,28 +87,17 @@ export default {
     clearNotification({ commit }) {
       commit('CLEAR_NOTIFICATION');
     }
-
-    // --- Deprecated / Renamed ---
-    // setTemplateEditData({ commit }, data) {
-    //   commit('SET_TEMPLATE_EDIT_DATA', data)
-    // },
-    // setExceptionEditData({ commit }, data) {
-    //   commit('SET_EXCEPTION_EDIT_DATA', data)
-    // }
-     // --- End Deprecated ---
   },
 
   getters: {
     isModalOpen: (state) => (modalName) => {
+       // Check if the modalName exists and return its boolean state
        return state.modals[modalName] || false;
     },
     getModalData: (state) => (modalName) => {
+        // Return the data associated with the modal, or null if none
         return state.modalData[modalName] || null;
     },
-    // --- Deprecated / Renamed ---
-    // templateEditData: state => state.templateEditData,
-    // exceptionEditData: state => state.exceptionEditData
-    // --- End Deprecated ---
   }
 }
 
