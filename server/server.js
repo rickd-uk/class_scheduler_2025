@@ -7,6 +7,7 @@ const db = require('./models'); // Imports ./models/index.js by default
 const authRoutes = require('./routes/authRoutes');
 const classRoutes = require('./routes/classRoutes');
 const textbookRoutes = require('./routes/textbookRoutes'); // Import textbook routes
+const scheduleRoutes = require('./routes/scheduleRoutes');
 // --- Middleware Imports ---
 const authenticateToken = require('./middleware/authenticateToken');
 
@@ -49,6 +50,7 @@ app.get('/api', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/classes', authenticateToken, classRoutes); // Classes routes are protected
 app.use('/api/textbooks', textbookRoutes); // Mount textbook routes (add authenticateToken if needed)
+app.use('/api/schedule', authenticateToken, scheduleRoutes);
 
 // --- Error Handling Middleware (Should be last) ---
 app.use((err, req, res, next) => {

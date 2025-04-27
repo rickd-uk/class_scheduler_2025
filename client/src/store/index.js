@@ -8,6 +8,10 @@ import daysOff from './modules/daysOff'
 import schoolYear from './modules/schoolYear'
 import ui from './modules/ui'
 
+console.log("Registering Vuex modules:", {
+    auth, classes, textbooks, schedule, templates, daysOff, schoolYear, ui
+});
+
 export default createStore({
   modules: {
     auth,

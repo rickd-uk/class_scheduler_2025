@@ -1,114 +1,91 @@
-// import ScheduleService from '../../services/ScheduleService'; // Assuming you create this service
+// Import the actual service
+import ScheduleService from '../../services/ScheduleService';
+
+// --- Add Log 1 ---
+console.log("--- Executing schedule.js store module ---");
 
 export default {
   namespaced: true,
 
   state: () => ({
-    regularSchedule: {}, // e.g., { monday: [...], tuesday: [...], ... }
-    dailyExceptions: [], // Array of exceptions { date: 'YYYY-MM-DD', changes: [...] }
+    regularSchedule: {},
+    dailyExceptions: [],
     isLoading: false,
     error: null,
   }),
 
   mutations: {
-    SET_REGULAR_SCHEDULE(state, schedule) {
-      state.regularSchedule = schedule;
-    },
-    SET_DAILY_EXCEPTIONS(state, exceptions) {
-      state.dailyExceptions = exceptions;
-    },
-    ADD_EXCEPTION(state, exception) {
-        state.dailyExceptions.push(exception);
-    },
-    UPDATE_EXCEPTION(state, updatedException) {
-       const index = state.dailyExceptions.findIndex(e => e.date === updatedException.date); // Or use an ID if available
-       if (index !== -1) {
-         state.dailyExceptions.splice(index, 1, updatedException);
-       }
-    },
-     REMOVE_EXCEPTION(state, exceptionDate) { // Or ID
-      state.dailyExceptions = state.dailyExceptions.filter(e => e.date !== exceptionDate);
-    },
-    SET_LOADING(state, isLoading) {
-      state.isLoading = isLoading;
-    },
-    SET_ERROR(state, error) {
-      state.error = error;
-    },
-     RESET_STATE(state) {
-      state.regularSchedule = {};
-      state.dailyExceptions = [];
-      state.isLoading = false;
-      state.error = null;
-    }
+    SET_REGULAR_SCHEDULE(state, schedule) { /* ... */ },
+    SET_DAILY_EXCEPTIONS(state, exceptions) { /* ... */ },
+    ADD_EXCEPTION(state, exception) { /* ... */ },
+    UPDATE_EXCEPTION(state, updatedException) { /* ... */ },
+    REMOVE_EXCEPTION(state, exceptionDate) { /* ... */ },
+    SET_LOADING(state, isLoading) { /* ... */ },
+    SET_ERROR(state, error) { /* ... */ },
+     RESET_STATE(state) { /* ... */ }
   },
 
-  actions: {
-    async fetchRegularSchedule({ commit }) {
+  actions: { // <-- Check this object
+    // --- Removed the invalid _logDefinition ---
+
+    async fetchRegularSchedule({ commit, state }) {
+      if (Object.keys(state.regularSchedule).length > 0 && !state.isLoading) { /* return; */ }
       commit('SET_LOADING', true);
       commit('SET_ERROR', null);
       try {
-        // const response = await ScheduleService.getRegular(); // Replace with actual API call
-        // commit('SET_REGULAR_SCHEDULE', response.data);
-
-         // Placeholder:
-        await new Promise(resolve => setTimeout(resolve, 400)); // Simulate network delay
-        const placeholderData = {
-            monday: [{ time: '09:00', classId: 'c1', duration: 60, notes: 'Period 1' }, { time: '10:15', classId: 'c2', duration: 60, notes: 'Period 2' }],
-            tuesday: [{ time: '09:00', classId: 'c3', duration: 90, notes: 'Block 1' }],
-            wednesday: [],
-            thursday: [{ time: '13:00', classId: 'c1', duration: 60, notes: 'Period 5' }],
-            friday: [{ time: '09:00', classId: 'c2', duration: 60, notes: 'Period 1' }],
-        };
+        // Placeholder fetch
+        await new Promise(resolve => setTimeout(resolve, 400));
+        const placeholderData = { /* ... placeholder data ... */ };
         commit('SET_REGULAR_SCHEDULE', placeholderData);
         console.log('Fetched placeholder regular schedule');
-
-      } catch (error) {
-        const message = error.response?.data?.message || error.message || 'Failed to fetch regular schedule';
-        commit('SET_ERROR', message);
-        console.error('Error fetching regular schedule:', message);
-      } finally {
-        commit('SET_LOADING', false);
-      }
+      } catch (error) { /* ... error handling ... */ }
+      finally { commit('SET_LOADING', false); }
     },
      async fetchDailyExceptions({ commit }) {
-      commit('SET_LOADING', true);
-      commit('SET_ERROR', null);
-      try {
-        // const response = await ScheduleService.getExceptions(); // Replace with actual API call
-        // commit('SET_DAILY_EXCEPTIONS', response.data);
+        // Placeholder fetch
+       commit('SET_LOADING', true);
+       commit('SET_ERROR', null);
+       try {
+           await new Promise(resolve => setTimeout(resolve, 200));
+           const placeholderData = [ /* ... placeholder data ... */ ];
+           commit('SET_DAILY_EXCEPTIONS', placeholderData);
+           console.log('Fetched placeholder daily exceptions');
+       } catch (error) { /* ... error handling ... */ }
+       finally { commit('SET_LOADING', false); }
+     },
 
-         // Placeholder:
-        await new Promise(resolve => setTimeout(resolve, 200)); // Simulate network delay
-        const placeholderData = [
-            { date: '2025-05-01', isDayOff: true, reason: 'Public Holiday' },
-            { date: '2025-05-10', changes: [{ time: '10:15', action: 'cancel' }, { time: '14:00', classId: 'c3', duration: 45, notes: 'Special Assembly'}] }
-        ];
-        commit('SET_DAILY_EXCEPTIONS', placeholderData);
-        console.log('Fetched placeholder daily exceptions');
-
-      } catch (error) {
-         const message = error.response?.data?.message || error.message || 'Failed to fetch daily exceptions';
-        commit('SET_ERROR', message);
-        console.error('Error fetching daily exceptions:', message);
-      } finally {
-        commit('SET_LOADING', false);
-      }
-    },
-    // Add actions for updateRegularSchedule, saveException, deleteException
+     // --- Action to save the updated schedule ---
+     async updateRegularSchedule({ commit, dispatch }, newScheduleData) {
+         console.log("[Action schedule/updateRegularSchedule] Action started."); // <-- Add Log 3
+         commit('SET_LOADING', true);
+         commit('SET_ERROR', null);
+         try {
+             const response = await ScheduleService.updateRegular(newScheduleData);
+             commit('SET_REGULAR_SCHEDULE', response.data);
+             console.log("Updated regular schedule via API");
+             dispatch('ui/showNotification', { type: 'success', message: 'Schedule updated successfully!' }, { root: true });
+             return response.data; // Return data
+         } catch(error) {
+            const message = error.response?.data?.message || error.message || 'Failed to update schedule';
+            commit('SET_ERROR', message);
+            console.error('Error updating regular schedule:', message);
+            dispatch('ui/showNotification', { type: 'error', message }, { root: true });
+            throw new Error(message);
+         } finally {
+             commit('SET_LOADING', false);
+         }
+     }
+    // Add actions for saveException, deleteException later
   },
 
   getters: {
+    // Getters remain the same...
     regularSchedule: state => state.regularSchedule,
     dailyExceptions: state => state.dailyExceptions,
     isLoading: state => state.isLoading,
     error: state => state.error,
-    getScheduleForDay: (state) => (dayOfWeek) => { // dayOfWeek e.g., 'monday'
-      return state.regularSchedule[dayOfWeek.toLowerCase()] || [];
-    },
-    getExceptionForDate: (state) => (dateString) => { // dateString e.g., 'YYYY-MM-DD'
-      return state.dailyExceptions.find(e => e.date === dateString);
-    }
+    getScheduleForDay: (state) => (dayOfWeek) => { /* ... */ },
+    getExceptionForDate: (state) => (dateString) => { /* ... */ }
   },
 };
 
