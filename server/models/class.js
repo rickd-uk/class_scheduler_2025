@@ -18,13 +18,18 @@ module.exports = (sequelize, DataTypes) => {
     }
   }
   Class.init({
-    name: {
-      type: DataTypes.STRING,
+    // Renamed from 'name', stores class number (1-15)
+    classNumber: {
+      type: DataTypes.STRING, // Keep as STRING for flexibility, validate in route
       allowNull: false
     },
-    subject: DataTypes.STRING,
-    gradeLevel: DataTypes.STRING,
-    userId: { // Ensure this matches the migration
+    // Renamed from 'gradeLevel', stores year (1-6)
+    yearLevel: {
+       type: DataTypes.STRING, // Keep as STRING, validate in route
+       allowNull: false // Make year level mandatory
+    },
+    // 'subject' column is removed
+    userId: {
       type: DataTypes.INTEGER,
       allowNull: false
     }
