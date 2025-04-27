@@ -1,74 +1,82 @@
-# Teacher Class Scheduler: Vue.js and PostgreSQL Conversion
+# Teacher Class Scheduler
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) A full-stack application designed to help teachers manage their class schedules, textbooks, templates, and days off efficiently. Built with Vue.js, Express, PostgreSQL, and Docker.
 
 ## Overview
 
-This project has been converted from a client-side only application using HTML, CSS, and vanilla JavaScript to a full-stack application with:
+This project provides a robust solution for teachers needing to organize their complex schedules. Originally a client-side tool, it has been re-architected into a modern full-stack application featuring:
 
-- **Vue.js frontend**: Modern component-based UI
-- **Express backend**: RESTful API server
-- **PostgreSQL database**: Robust data persistence
-- **Docker support**: Containerized development environment
+* **Intuitive Interface**: A clean, two-column layout built with Vue.js for easy navigation and management.
+* **Reliable Backend**: An Express.js API server handling business logic and data validation.
+* **Persistent Storage**: A PostgreSQL database ensuring data integrity and persistence.
+* **Containerized Environment**: Docker support for simplified setup and consistent development/deployment.
 
-The application has been restructured to better utilize horizontal space with a 2-column layout that improves the user experience on larger screens.
+## Features
 
-## Key Improvements
+* **🗓️ Weekly & Daily Scheduling**: View and manage regular weekly schedules and specific daily plans.
+* **📚 Resource Management**: Easily add, edit, and delete Classes, Textbooks, and School Year details.
+* **📄 Template System**: Create, apply, and manage reusable schedule templates (e.g., "Standard Week", "Exam Week").
+* **🚫 Days Off & Exceptions**: Mark specific days off (holidays, personal days) and handle daily schedule exceptions or modifications.
+* **🔐 User Authentication**: Secure login and registration for multi-user support.
+* **✨ Modern UI**: Responsive design built with Vue 3 and the Composition API.
+* **🐳 Dockerized**: Includes `docker-compose.yml` for easy local setup of the frontend, backend, and database.
 
-### 1. Enhanced Architecture
+## Tech Stack
 
-- **Client-Server Separation**: Clear separation of concerns between UI (Vue) and data management (Express + PostgreSQL)
-- **State Management**: Vuex store modules for organized state handling
-- **API Services**: Dedicated service layers for communication between frontend and backend
-- **Component-Based Design**: Modular Vue components that are easier to maintain and extend
+* **Frontend**:
+    * [Vue.js](https://vuejs.org/) (v3) with Composition API
+    * [Vuex](https://vuex.vuejs.org/) (v4) for State Management
+    * [Vue Router](https://router.vuejs.org/) (v4) for Routing
+    * [Axios](https://axios-http.com/) for API Communication
+    * [Vite](https://vitejs.dev/) for Frontend Tooling
+    * CSS (with variables for theming)
+* **Backend**:
+    * [Node.js](https://nodejs.org/)
+    * [Express.js](https://expressjs.com/) Framework
+    * [PostgreSQL](https://www.postgresql.org/) Database
+    * [Sequelize](https://sequelize.org/) ORM (or your chosen ORM/driver like `pg`)
+    * [bcrypt](https://www.npmjs.com/package/bcrypt) for Password Hashing
+    * [JSON Web Tokens (JWT)](https://jwt.io/) for Authentication
+* **Development**:
+    * [Docker](https://www.docker.com/) & [Docker Compose](https://docs.docker.com/compose/)
+    * [Git](https://git-scm.com/) for Version Control
 
-### 2. Optimized UI Layout
+## Setup Instructions 🚀
 
-- **Two-Column Design**: Left column for management panels (classes, textbooks, etc.) and right column for schedule views
-- **Tabbed Interface**: Easily switch between templates, weekly schedule, and daily schedule views
-- **Responsive Design**: Adapts to different screen sizes while prioritizing horizontal space usage
-- **Modal Dialogs**: Improved editing experience with dedicated editing interfaces
+Detailed instructions for setting up the development environment (using Docker or running services individually) can be found in the setup guide:
 
-### 3. Robust Data Persistence
+➡️ **[SETUP.md](./SETUP.md)**
 
-- **PostgreSQL Database**: Replaced localStorage with proper database tables and relationships
-- **Data Validation**: Server-side validation ensures data integrity
-- **Transaction Support**: Complex operations (like template application) use database transactions for consistency
-- **Indexing**: Optimized query performance with appropriate database indexes
+## Usage
 
-### 4. Additional Features
+1.  **Start the Application**: Follow the instructions in `SETUP.md` to get the application running (preferably using `docker-compose up`).
+2.  **Access the App**: Open your browser to the frontend URL (e.g., `http://localhost:5173`).
+3.  **Register/Login**: Create a new user account or log in with existing credentials.
+4.  **Manage Resources**: Use the panels in the left column to add/edit classes, textbooks, school year info, and days off.
+5.  **Manage Schedules**:
+    * Use the "Templates" tab to create or apply schedule templates.
+    * Use the "Weekly Schedule" tab to view and edit the regular weekly plan.
+    * Use the "Daily Schedule" tab to view the schedule for a specific date, including any applied exceptions or days off.
 
-- **User Authentication**: Multi-user support with secure authentication
-- **Improved Data Relationships**: Proper foreign keys and constraints between related data
-- **Better Exception Handling**: More robust error handling throughout the application
+## Contributing
 
-## Technical Highlights
+Contributions are welcome! Please feel free to open an issue or submit a pull request.
 
-### Frontend (Vue.js)
+*(Optional: Add more specific contribution guidelines here or link to a CONTRIBUTING.md file)*
 
-- **Component Structure**: Organized components for each major feature
-- **Vuex Store**: Modular store design with separate modules for each data type
-- **API Integration**: Clean service layer for API communication
-- **Form Handling**: Improved form components with validation
+1.  Fork the repository.
+2.  Create your feature branch (`git checkout -b feature/AmazingFeature`).
+3.  Commit your changes (`git commit -m 'Add some AmazingFeature'`).
+4.  Push to the branch (`git push origin feature/AmazingFeature`).
+5.  Open a Pull Request.
 
-### Backend (Express + PostgreSQL)
+## License
 
-- **API Routes**: RESTful API endpoints for all application features
-- **Database Schema**: Well-structured tables with proper relationships
-- **Middleware**: Authentication and error handling middleware
-- **Transaction Support**: Database transactions for data consistency
+Distributed under the MIT License. See `LICENSE` file for more information.
 
-### Development Environment
+*(Optional: Create a LICENSE file with the MIT license text if you haven't already)*
 
-- **Docker Compose**: Easy setup with containerized services
-- **Development Scripts**: Convenient npm scripts for common tasks
-- **Environment Configuration**: Flexible configuration via environment variables
+---
 
-## Result
+*Happy Scheduling!* 🍎
 
-The converted application maintains all the functionality of the original while adding:
-1. Better organization and structure
-2. Improved horizontal space utilization
-3. Proper data persistence
-4. Multi-user support
-5. Enhanced maintainability and extensibility
-
-This modern architecture makes the application more scalable, maintainable, and provides a better foundation for future enhancements.

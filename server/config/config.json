@@ -1,0 +1,29 @@
+{
+  "development": {
+    "username": "scheduler_user",
+    "password": "cherry20254SCHEDULER",
+    "database": "scheduler_dev",
+    "host": "db",
+    "dialect": "postgres",
+    "port": 5432
+  },
+  "test": {
+     "username": "scheduler_user",
+    "password": "cherry20254SCHEDULER",
+    "database": "scheduler_test",
+    "host": "db",
+    "dialect": "postgres",
+    "port": 5432
+  },
+  "production": {
+     "use_env_variable": "DATABASE_URL",
+     "dialect": "postgres",
+     "dialectOptions": {
+       "ssl": {
+         "require": true,
+         "rejectUnauthorized": false
+       }
+     }
+  }
+}
+

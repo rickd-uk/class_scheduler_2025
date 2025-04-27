@@ -1,0 +1,108 @@
+# Node.js / npm / yarn
+# =====================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json # If using yarn, ignore npm's lock file
+# yarn.lock # Usually committed, but ignore if preferred
+
+# Server-specific (adjust if not Node.js)
+# =====================
+# Logs
+logs/
+*.log
+*.logs
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Environment variables
+.env
+.env.*.local
+.env.local
+# Keep .env.example in git!
+# !.env.example
+
+# Build output (if server has a build step)
+dist/
+build/
+*.out
+
+# Optional: Dependency directories (if managing differently)
+# vendor/
+
+
+# Frontend (Vite / Vue)
+# =====================
+# Build output
+client/dist/
+client/.output/
+
+# Cache files
+client/.vite/
+client/.nuxt/ # If using Nuxt with Vite
+client/.vue-devtools-proxy-log # Vue DevTools log
+
+# IDE / Editor specific
+# =====================
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw? # Vim swap files
+
+# Operating System files
+# =====================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+# Thumbnails
+._*
+# Files that might appear in the root of a volume
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+# Directories potentially created on remote AFP share
+.AppleDB
+.AppleDesktop
+Network Trash Folder/
+Temporary Items/
+.apdisk
+
+# Windows
+Thumbs.db
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+# KDE directory preferences
+.directory
+# Linux trash folder which might appear on external disk
+.Trash-*
+
+# Other
+# =====================
+# Optional: Test coverage
+coverage/
+.nyc_output/
+
+# Optional: Production credentials / secrets
+# *.pem
+# *.key
+
+

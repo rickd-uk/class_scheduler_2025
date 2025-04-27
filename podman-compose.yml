@@ -1,0 +1,77 @@
+version: '3.8'
+
+services:
+  # Backend Service (Express + Node.js)
+  server:
+    build: ./server # Path to server Dockerfile directory
+    container_name: scheduler-server
+    restart: unless-stopped
+    ports:
+      - "3000:3000" # Map host port 3000 to container port 3000 (or use ${PORT})
+    volumes:
+      - ./server:/usr/src/app # Mount server code for development
+      - /usr/src/app/node_modules # Exclude node_modules from host mount
+    environment:
+      # Pass environment variables from server/.env OR define directly
+      - NODE_ENV=${NODE_ENV:-development} # Provide default if not set
+      - PORT=${PORT:-3000} # Provide default if not set
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_HOST=${POSTGRES_HOST:-db} # Provide default if not set
+      - POSTGRES_PORT=${POSTGRES_PORT:-5432} # Provide default if not set
+      # Explicitly set JWT_SECRET and CLIENT_URL for the container
+      - JWT_SECRET=your_very_secret_random_string_here # <-- CHANGE THIS TO YOUR ACTUAL SECRET
+      - JWT_EXPIRES_IN=1d # Provide default if not set
+      - CLIENT_URL=http://localhost:5173
+    depends_on:
+      - db # Wait for database service to be ready (basic check)
+    networks:
+      - scheduler-network
+
+  # Frontend Service (Vue + Vite)
+  client:
+    build: ./client # Path to client Dockerfile directory
+    container_name: scheduler-client
+    restart: unless-stopped
+    ports:
+      - "5173:5173" # Map host port 5173 to container port 5173 (Vite default)
+    volumes:
+      - ./client:/usr/src/app # Mount client code for development
+      - /usr/src/app/node_modules # Exclude node_modules from host mount
+    # Environment section can be empty or removed if no other vars are needed here
+    # environment:
+      # VITE_API_URL is now loaded from .env.development.local by Vite itself
+    depends_on:
+      - server # Optional: wait for server (though client usually handles API errors)
+    networks:
+      - scheduler-network
+
+  # Database Service (PostgreSQL)
+  db:
+    image: postgres:15 # Use a specific PostgreSQL version
+    container_name: scheduler-db
+    restart: unless-stopped
+    environment:
+      # These MUST match the variables used by the server service
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data # Persist database data
+    ports:
+      # Use the non-conflicting host port mapping if needed (e.g., 5433)
+      - "5433:5432" # Map host port 5433 to container port 5432
+    networks:
+      - scheduler-network
+
+# Define Networks
+networks:
+  scheduler-network:
+    driver: bridge
+
+# Define Volumes
+volumes:
+  postgres_data: # Named volume for database persistence
+
+
