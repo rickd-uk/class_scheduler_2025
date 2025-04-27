@@ -1,4 +1,4 @@
-// import TextbooksService from '../../services/TextbooksService'; // Assuming you create this service
+import TextbooksService from '../../services/TextbooksService'; // Use the actual service
 
 export default {
   namespaced: true,
@@ -14,22 +14,26 @@ export default {
       state.textbooks = textbooks;
     },
     ADD_TEXTBOOK(state, newTextbook) {
-      state.textbooks.push(newTextbook);
+      state.textbooks.unshift(newTextbook); // Add to beginning
     },
     UPDATE_TEXTBOOK(state, updatedTextbook) {
-      const index = state.textbooks.findIndex(t => t.id === updatedTextbook.id);
-      if (index !== -1) {
-        state.textbooks.splice(index, 1, updatedTextbook);
-      }
+        // Find the index of the textbook to update
+        const index = state.textbooks.findIndex(book => book.id === updatedTextbook.id);
+        if (index !== -1) {
+            // Replace the old item with the updated one
+            state.textbooks.splice(index, 1, updatedTextbook);
+        }
     },
     REMOVE_TEXTBOOK(state, textbookId) {
-      state.textbooks = state.textbooks.filter(t => t.id !== textbookId);
+        // Filter out the deleted textbook
+        state.textbooks = state.textbooks.filter(book => book.id !== textbookId);
     },
     SET_LOADING(state, isLoading) {
       state.isLoading = isLoading;
     },
     SET_ERROR(state, error) {
       state.error = error;
+      state.isLoading = false; // Ensure loading is false on error
     },
      RESET_STATE(state) {
       state.textbooks = [];
@@ -39,31 +43,76 @@ export default {
   },
 
   actions: {
-    async fetchTextbooks({ commit }) {
+    async fetchTextbooks({ commit, state }) {
+       if (state.isLoading) return;
       commit('SET_LOADING', true);
       commit('SET_ERROR', null);
       try {
-        // const response = await TextbooksService.getAll(); // Replace with actual API call
-        // commit('SET_TEXTBOOKS', response.data);
-
-         // Placeholder:
-        await new Promise(resolve => setTimeout(resolve, 300)); // Simulate network delay
-        const placeholderData = [
-          { id: 'tb1', title: 'Algebra Basics', subject: 'Mathematics', isbn: '978-1234567890' },
-          { id: 'tb2', title: 'Intro to Literature', subject: 'English', isbn: '978-0987654321' },
-        ];
-        commit('SET_TEXTBOOKS', placeholderData);
-        console.log('Fetched placeholder textbooks');
-
+        const response = await TextbooksService.getAll();
+        commit('SET_TEXTBOOKS', response.data);
+        console.log('Fetched textbooks from API');
       } catch (error) {
          const message = error.response?.data?.message || error.message || 'Failed to fetch textbooks';
         commit('SET_ERROR', message);
         console.error('Error fetching textbooks:', message);
       } finally {
-        commit('SET_LOADING', false);
+         commit('SET_LOADING', false);
       }
     },
-     // Add actions for addTextbook, updateTextbook, deleteTextbook using API calls
+
+     async addTextbook({ commit, dispatch }, textbookData) {
+        commit('SET_ERROR', null);
+        try {
+            const response = await TextbooksService.add(textbookData);
+            commit('ADD_TEXTBOOK', response.data);
+            console.log('Added textbook via API:', response.data);
+             // Optionally dispatch success notification
+            // dispatch('ui/showNotification', { type: 'success', message: 'Textbook added successfully!' }, { root: true });
+            return response.data;
+        } catch (error) {
+             const message = error.response?.data?.message || error.message || 'Failed to add textbook';
+             console.error('Error adding textbook:', message);
+             // Optionally dispatch UI notification
+             // dispatch('ui/showNotification', { type: 'error', message }, { root: true });
+             throw new Error(message);
+        }
+    },
+
+    async updateTextbook({ commit, dispatch }, { id, data }) {
+        commit('SET_ERROR', null);
+        try {
+            const response = await TextbooksService.update(id, data);
+            commit('UPDATE_TEXTBOOK', response.data); // Update local state with returned data
+            console.log(`Updated textbook ID ${id} via API:`, response.data);
+            // Optionally dispatch success notification
+            // dispatch('ui/showNotification', { type: 'success', message: 'Textbook updated successfully!' }, { root: true });
+            return response.data;
+        } catch (error) {
+            const message = error.response?.data?.message || error.message || 'Failed to update textbook';
+            console.error(`Error updating textbook ID ${id}:`, message);
+            // Optionally dispatch UI notification
+            // dispatch('ui/showNotification', { type: 'error', message }, { root: true });
+            throw new Error(message);
+        }
+    },
+
+    async deleteTextbook({ commit, dispatch }, textbookId) {
+        commit('SET_ERROR', null);
+        try {
+            await TextbooksService.delete(textbookId);
+            commit('REMOVE_TEXTBOOK', textbookId); // Remove from local state
+            console.log(`Deleted textbook ID ${textbookId} via API`);
+            // Optionally dispatch success notification
+            // dispatch('ui/showNotification', { type: 'success', message: 'Textbook deleted successfully!' }, { root: true });
+        } catch (error) {
+            const message = error.response?.data?.message || error.message || 'Failed to delete textbook';
+            console.error(`Error deleting textbook ID ${textbookId}:`, message);
+            // Optionally dispatch UI notification
+            // dispatch('ui/showNotification', { type: 'error', message }, { root: true });
+            throw new Error(message);
+        }
+    }
+    // Add actions for link/unlink later
   },
 
   getters: {
