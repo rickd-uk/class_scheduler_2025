@@ -7,24 +7,33 @@
       </button>
     </div>
 
-     <div v-if="isLoading" class="loading">Loading schedule...</div>
-     <div v-else-if="error" class="error-message">{{ error }}</div>
-     <div v-else-if="hasSchedule" class="schedule-table-container">
+     <div v-if="isLoadingSchedule || isLoadingClasses" class="loading">Loading schedule...</div>
+     <div v-else-if="scheduleError || classesError" class="error-message">
+         {{ scheduleError || classesError || 'Error loading data.' }}
+     </div>
+
+     <div v-else-if="hasScheduleData" class="schedule-table-container">
         <table class="schedule-table">
             <thead>
                 <tr>
-                    <th>Time</th>
+                    <th>Period</th>
                     <th v-for="day in daysOfWeek" :key="day">{{ capitalize(day) }}</th>
                 </tr>
             </thead>
             <tbody>
-                <tr>
-                    <td colspan="6" class="placeholder-content">Weekly schedule display goes here. (Needs implementation based on time slots)</td>
-                 </tr>
-                 </tbody>
+                <tr v-for="period in periods" :key="period">
+                    <td>Period {{ period }}</td>
+                    <td v-for="day in daysOfWeek" :key="`${day}-${period}`">
+                        <div v-if="getClassForSlot(day, period)" class="schedule-item">
+                            Yr {{ getClassForSlot(day, period).yearLevel }} - Cls {{ getClassForSlot(day, period).classNumber }}
+                        </div>
+                        <div v-else class="no-class">--</div>
+                    </td>
+                </tr>
+            </tbody>
         </table>
     </div>
-     <p v-else class="placeholder-content">No regular weekly schedule defined yet.</p>
+    <p v-else class="placeholder-content">No regular weekly schedule defined yet. Click 'Edit Schedule' to create one.</p>
   </div>
 </template>
 
@@ -34,95 +43,145 @@ import { useStore } from 'vuex';
 
 const store = useStore();
 
-const daysOfWeek = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday']; // Adjust as needed
+// Define days and periods for the grid
+const daysOfWeek = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+const periods = [1, 2, 3, 4, 5, 6];
 
-// --- Computed Properties ---
-const schedule = computed(() => store.getters['schedule/regularSchedule']);
-const isLoading = computed(() => store.getters['schedule/isLoading']);
-const error = computed(() => store.getters['schedule/error']);
-// const classes = computed(() => store.getters['classes/allClasses']); // Needed for class names
+// --- Computed Properties from Store ---
+// Get the raw schedule data (object with days as keys, arrays of {classId: id} or null as values)
+const scheduleData = computed(() => store.getters['schedule/regularSchedule']);
+// Get the list of all defined classes {id, classNumber, yearLevel, ...}
+const classes = computed(() => store.getters['classes/allClasses']);
+// Loading and error states
+const isLoadingSchedule = computed(() => store.getters['schedule/isLoading']);
+const isLoadingClasses = computed(() => store.getters['classes/isLoading']);
+const scheduleError = computed(() => store.getters['schedule/error']);
+const classesError = computed(() => store.getters['classes/error']);
 
-const hasSchedule = computed(() => {
-    return schedule.value && Object.keys(schedule.value).length > 0 && daysOfWeek.some(day => schedule.value[day]?.length > 0);
+// Check if there is any actual schedule data to display
+const hasScheduleData = computed(() => {
+    // Check if scheduleData is populated and if any day has at least one non-null entry
+    return scheduleData.value &&
+           Object.keys(scheduleData.value).length > 0 &&
+           daysOfWeek.some(day => scheduleData.value[day]?.some(slot => slot !== null));
 });
 
 // --- Methods ---
+
+// Function to open the editing modal
 const openWeeklyEditor = () => {
     console.log("Opening Weekly Schedule Editor Modal");
-    // Pass the current schedule data to the modal
+    // Pass the current schedule data (fetched from store) to the modal
     store.dispatch('ui/openModal', {
         modalName: 'weeklySchedule',
-        data: JSON.parse(JSON.stringify(schedule.value)) // Pass deep copy
+        // Pass a deep copy to prevent accidental modification before saving
+        data: JSON.parse(JSON.stringify(scheduleData.value))
     });
 };
 
+// Helper to capitalize day names for table headers
 const capitalize = (s) => {
   if (typeof s !== 'string') return ''
   return s.charAt(0).toUpperCase() + s.slice(1)
 }
 
-// --- Lifecycle ---
+// Helper function to find the full class details for a given day and period
+const getClassForSlot = (day, period) => {
+    // Adjust period to be 0-indexed for the array
+    const periodIndex = period - 1;
+    // Get the schedule item for the specific day and period index
+    // Ensure day exists in scheduleData before trying to access its index
+    const scheduleItem = scheduleData.value?.[day]?.[periodIndex];
+
+    // If there's no item or it's null, return null
+    if (!scheduleItem || !scheduleItem.classId) {
+        return null;
+    }
+
+    // Find the corresponding class details from the classes array
+    // Ensure we compare IDs correctly (e.g., handle string vs number if necessary)
+    const classIdToFind = scheduleItem.classId;
+    const foundClass = classes.value.find(cls => String(cls.id) === String(classIdToFind)); // Safer comparison
+
+    // Return the found class object, or a placeholder if not found
+    return foundClass || { yearLevel: '?', classNumber: '?' }; // Placeholder for missing class
+};
+
+// --- Lifecycle Hook ---
 onMounted(() => {
-  // Ensure schedule is fetched if not already present
-  if (!hasSchedule.value && !isLoading.value) {
+  // Ensure schedule data is fetched if not already present
+  // Check if scheduleData is empty or not yet loaded
+  if ((!scheduleData.value || Object.keys(scheduleData.value).length === 0) && !isLoadingSchedule.value) {
+    console.log("[WeeklySchedulePanel] Fetching regular schedule on mount.");
     store.dispatch('schedule/fetchRegularSchedule');
   }
-   // Ensure classes are fetched for names (if needed here)
-   // if (store.getters['classes/allClasses'].length === 0) {
-   //     store.dispatch('classes/fetchClasses');
-   // }
+   // Ensure classes are fetched for displaying names/details
+   if (classes.value.length === 0 && !isLoadingClasses.value) {
+       console.log("[WeeklySchedulePanel] Fetching classes on mount.");
+       store.dispatch('classes/fetchClasses');
+   }
 });
-
-// --- Data Processing (Placeholder) ---
-// You would need logic here to determine time slots based on the schedule data
-// and map schedule items to those slots for the table display.
-// const timeSlots = computed(() => {
-//    // Logic to extract unique start times and create slots
-//    return ['09:00', '10:00', '11:00', '13:00', '14:00']; // Example
-// });
 
 </script>
 
 <style scoped>
-/* Styles for the panel */
+/* Styles for the panel display */
 .schedule-table-container {
   margin-top: 1rem;
-  overflow-x: auto; /* Allow horizontal scrolling on small screens */
+  overflow-x: auto; /* Allow horizontal scrolling if needed */
 }
 
 .schedule-table {
   width: 100%;
   border-collapse: collapse;
   border: 1px solid var(--border-color);
+  table-layout: fixed; /* Even column widths */
 }
 
 .schedule-table th,
 .schedule-table td {
   border: 1px solid var(--border-color);
-  padding: 0.6rem;
-  text-align: left;
+  padding: 0.6rem; /* Adjust padding */
+  text-align: center;
   font-size: 0.85rem;
-  vertical-align: top;
+  vertical-align: middle; /* Center content vertically */
+  height: 50px; /* Ensure consistent row height */
+  min-width: 90px; /* Minimum width for columns */
 }
 
 .schedule-table th {
   background-color: var(--light);
   font-weight: 600;
-  text-align: center;
 }
 
-.schedule-table td {
-    min-height: 50px; /* Ensure cells have some height */
+.schedule-item {
+    font-weight: 500;
+    /* Add background or other styling if desired */
+    white-space: nowrap; /* Prevent wrapping */
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.no-class {
+    color: var(--secondary); /* Lighter color for empty slots */
+    font-style: italic;
+    font-size: 0.8rem;
 }
 
 .btn-sm {
   padding: 0.2rem 0.5rem;
   font-size: 0.75rem;
 }
-.loading, .error-message {
+.loading, .error-message, .placeholder-content {
     padding: 1rem;
     text-align: center;
     color: var(--secondary);
+}
+.error-message {
+    color: var(--danger);
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    border-radius: var(--border-radius);
 }
 </style>
 

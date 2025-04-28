@@ -8,38 +8,77 @@ export default {
   namespaced: true,
 
   state: () => ({
-    regularSchedule: {},
+    regularSchedule: {}, // Initialize as empty object
     dailyExceptions: [],
     isLoading: false,
     error: null,
   }),
 
   mutations: {
-    SET_REGULAR_SCHEDULE(state, schedule) { /* ... */ },
-    SET_DAILY_EXCEPTIONS(state, exceptions) { /* ... */ },
+    SET_REGULAR_SCHEDULE(state, schedule) {
+      // Ensure structure is correct when setting
+      const formattedSchedule = {};
+      const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+      const periods = 6;
+
+      days.forEach(day => {
+          formattedSchedule[day] = Array(periods).fill(null);
+          // Use the schedule passed to the mutation (could be empty object {} or null)
+          const scheduleForDay = schedule ? schedule[day] : null;
+          if (scheduleForDay && Array.isArray(scheduleForDay)) {
+              for (let i = 0; i < Math.min(scheduleForDay.length, periods); i++) {
+                  formattedSchedule[day][i] = scheduleForDay[i];
+              }
+          }
+      });
+      state.regularSchedule = formattedSchedule;
+      console.log("[Mutation SET_REGULAR_SCHEDULE] State updated:", JSON.parse(JSON.stringify(state.regularSchedule)));
+    },
+    // Other mutations...
+    SET_DAILY_EXCEPTIONS(state, exceptions) { state.dailyExceptions = exceptions; },
     ADD_EXCEPTION(state, exception) { /* ... */ },
     UPDATE_EXCEPTION(state, updatedException) { /* ... */ },
     REMOVE_EXCEPTION(state, exceptionDate) { /* ... */ },
-    SET_LOADING(state, isLoading) { /* ... */ },
-    SET_ERROR(state, error) { /* ... */ },
+    SET_LOADING(state, isLoading) { state.isLoading = isLoading; },
+    SET_ERROR(state, error) { state.error = error; state.isLoading = false; },
      RESET_STATE(state) { /* ... */ }
   },
 
   actions: { // <-- Check this object
-    // --- Removed the invalid _logDefinition ---
 
     async fetchRegularSchedule({ commit, state }) {
-      if (Object.keys(state.regularSchedule).length > 0 && !state.isLoading) { /* return; */ }
+      // Avoid refetch if already loading
+      if (state.isLoading) {
+          console.log("[Action fetchRegularSchedule] Already loading, skipping fetch.");
+          return;
+      }
+      // Optionally avoid refetch if data already exists (can be useful)
+      // if (Object.keys(state.regularSchedule).length > 0) {
+      //     console.log("[Action fetchRegularSchedule] Data exists, skipping fetch.");
+      //     return;
+      // }
+
       commit('SET_LOADING', true);
       commit('SET_ERROR', null);
       try {
-        // Placeholder fetch
-        await new Promise(resolve => setTimeout(resolve, 400));
-        const placeholderData = { /* ... placeholder data ... */ };
-        commit('SET_REGULAR_SCHEDULE', placeholderData);
-        console.log('Fetched placeholder regular schedule');
-      } catch (error) { /* ... error handling ... */ }
-      finally { commit('SET_LOADING', false); }
+        // --- Use the actual API Service ---
+        console.log("[Action fetchRegularSchedule] Calling ScheduleService.getRegular...");
+        const response = await ScheduleService.getRegular();
+        // The backend returns the schedule object or {} if none exists
+        // Pass the received data (or an empty object) to the mutation
+        commit('SET_REGULAR_SCHEDULE', response.data || {});
+        console.log('[Action fetchRegularSchedule] Successfully fetched schedule from API:', response.data);
+        // --- End API Call ---
+
+      } catch (error) {
+        const message = error.response?.data?.message || error.message || 'Failed to fetch regular schedule';
+        commit('SET_ERROR', message);
+        console.error('Error fetching regular schedule:', message);
+        // Also set schedule to empty on error to avoid showing stale data
+        commit('SET_REGULAR_SCHEDULE', {});
+      } finally {
+        commit('SET_LOADING', false);
+      }
     },
      async fetchDailyExceptions({ commit }) {
         // Placeholder fetch
@@ -56,7 +95,7 @@ export default {
 
      // --- Action to save the updated schedule ---
      async updateRegularSchedule({ commit, dispatch }, newScheduleData) {
-         console.log("[Action schedule/updateRegularSchedule] Action started."); // <-- Add Log 3
+         console.log("[Action schedule/updateRegularSchedule] Action started.");
          commit('SET_LOADING', true);
          commit('SET_ERROR', null);
          try {
