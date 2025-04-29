@@ -1,91 +1,116 @@
 // server/routes/classRoutes.js
 const express = require('express');
-// Import models needed, including Textbook for associations
 const { Class, User, Textbook } = require('../models');
 
 const router = express.Router();
 
 // --- GET All Classes for the logged-in user ---
 router.get('/', async (req, res) => {
+  const userId = req.user.id;
   try {
-    const userId = req.user.id;
     const classes = await Class.findAll({
       where: { userId: userId },
-      // Include associated textbooks using the explicit alias
       include: [{
           model: Textbook,
-          as: 'textbooks', // Use the alias matching the Class model definition
-          attributes: ['id', 'title'], // Only include id and title of textbooks
-          through: { attributes: [] } // Don't include attributes from the join table
+          as: 'textbooks',
+          attributes: ['id', 'title'],
+          through: { attributes: [] }
       }],
-      order: [['yearLevel', 'ASC'], ['classNumber', 'ASC']]
+      // Order primarily by type (numbered first), then year/number or name
+      order: [
+          ['classType', 'ASC'], // 'numbered' comes before 'special'
+          ['yearLevel', 'ASC'],
+          ['classNumber', 'ASC'],
+          ['className', 'ASC']
+      ]
     });
     res.status(200).json(classes);
   } catch (error) {
     console.error("Error fetching classes:", error);
-    // Send back the specific error message from Sequelize if available
     res.status(500).json({ message: 'Server error fetching classes.', error: error.message });
   }
 });
 
-// --- POST (Add) a new Class for the logged-in user ---
+// --- POST (Add) a new Class ---
 router.post('/', async (req, res) => {
-  const { classNumber, yearLevel } = req.body;
+  // Expect classType and relevant fields based on type
+  const { classType, classNumber, yearLevel, className } = req.body;
   const userId = req.user.id;
+  let dataToCreate = { userId, classType };
+  let validationError = null;
+  let yearLvl = null; // Declare yearLvl here
 
-  // Input Validation
-  if (!classNumber || !yearLevel) {
-    return res.status(400).json({ message: 'Class Number and Year Level are required.' });
+  // --- Input Validation ---
+  if (!classType || (classType !== 'numbered' && classType !== 'special')) {
+      validationError = 'Invalid class type specified.';
+  } else {
+      // Validate Year Level if provided (optional for special, required for numbered)
+      if (yearLevel) {
+          yearLvl = parseInt(yearLevel, 10);
+          if (isNaN(yearLvl) || yearLvl < 1 || yearLvl > 6) {
+              validationError = 'Year Level must be between 1 and 6.';
+          } else {
+              dataToCreate.yearLevel = yearLvl.toString(); // Add validated yearLevel
+          }
+      }
+
+      if (!validationError) { // Proceed if yearLevel is valid or not provided
+          if (classType === 'numbered') {
+              if (!classNumber || !yearLevel) { // Year level is required for numbered
+                  validationError = 'Class Number and Year Level are required for numbered classes.';
+              } else {
+                  const classNum = parseInt(classNumber, 10);
+                  if (isNaN(classNum) || classNum < 1 || classNum > 15) {
+                      validationError = 'Class Number must be between 1 and 15.';
+                  } else {
+                      dataToCreate.classNumber = classNum.toString();
+                      dataToCreate.className = null; // Ensure className is null
+                  }
+              }
+          } else if (classType === 'special') {
+              if (!className || className.trim() === '') {
+                  validationError = 'Class Name is required for special classes.';
+              } else {
+                  dataToCreate.className = className.trim();
+                  dataToCreate.classNumber = null; // Ensure number is null
+                  // yearLevel might have been set above if provided
+              }
+          }
+      }
   }
-  const classNum = parseInt(classNumber, 10);
-  if (isNaN(classNum) || classNum < 1 || classNum > 15) {
-      return res.status(400).json({ message: 'Class Number must be between 1 and 15.' });
+
+
+  if (validationError) {
+      return res.status(400).json({ message: validationError });
   }
-  const yearLvl = parseInt(yearLevel, 10);
-   if (isNaN(yearLvl) || yearLvl < 1 || yearLvl > 6) {
-      return res.status(400).json({ message: 'Year Level must be between 1 and 6.' });
-  }
+  // --- End Validation ---
 
   try {
-    // Check if class already exists
-    const existingClass = await Class.findOne({
-        where: {
-            classNumber: classNum.toString(),
-            yearLevel: yearLvl.toString(),
-            userId: userId
-        }
-    });
-    if (existingClass) {
-        return res.status(409).json({ message: `Class ${classNum} for Year ${yearLvl} already exists.` });
+    // Optional: Check for duplicates based on type
+    let existingClass = null;
+    if (dataToCreate.classType === 'numbered') {
+        existingClass = await Class.findOne({ where: { userId, classType: 'numbered', yearLevel: dataToCreate.yearLevel, classNumber: dataToCreate.classNumber } });
+        if (existingClass) return res.status(409).json({ message: `Numbered class ${dataToCreate.yearLevel}-${dataToCreate.classNumber} already exists.` });
+    } else { // Special class
+         // Check uniqueness for special class name *within the same year level if provided* or globally if not
+         const whereClause = { userId, classType: 'special', className: dataToCreate.className };
+         // if (dataToCreate.yearLevel) { // Optional: Make special names unique per year level
+         //     whereClause.yearLevel = dataToCreate.yearLevel;
+         // }
+         existingClass = await Class.findOne({ where: whereClause });
+         if (existingClass) return res.status(409).json({ message: `Special class named "${dataToCreate.className}" already exists${dataToCreate.yearLevel ? ` for Year ${dataToCreate.yearLevel}` : ''}.` });
     }
 
     // Create the new class
-    const newClass = await Class.create({
-      classNumber: classNum.toString(),
-      yearLevel: yearLvl.toString(),
-      userId: userId
-    });
+    const newClass = await Class.create(dataToCreate);
 
     // Refetch with the association using the alias
     const classWithTextbooks = await Class.findByPk(newClass.id, {
-        include: [{
-            model: Textbook,
-            as: 'textbooks', // Use the alias here too
-            attributes: ['id', 'title'],
-            through: { attributes: [] }
-        }]
+        include: [{ model: Textbook, as: 'textbooks', attributes: ['id', 'title'], through: { attributes: [] } }]
     });
-    res.status(201).json(classWithTextbooks || newClass); // Send back with textbooks association if found
+    res.status(201).json(classWithTextbooks || newClass);
 
-  } catch (error) {
-    console.error("Error adding class:", error);
-    // Error handling
-    if (error.name === 'SequelizeValidationError') {
-        const messages = error.errors.map(err => err.message);
-        return res.status(400).json({ message: 'Validation failed', errors: messages });
-    }
-    res.status(500).json({ message: 'Server error adding class.', error: error.message });
-  }
+  } catch (error) { /* ... error handling ... */ }
 });
 
 // --- DELETE a Class for the logged-in user ---
@@ -95,7 +120,7 @@ router.delete('/:id', async (req, res) => {
     try {
         const classToDelete = await Class.findOne({ where: { id: classId, userId: userId } });
         if (!classToDelete) {
-            return res.status(404).json({ message: 'Class not found or permission denied.' });
+            return res.status(404).json({ message: 'Class not found or you do not have permission to delete it.' });
         }
         await classToDelete.destroy(); // CASCADE delete should handle ClassTextbooks entries
         res.status(204).send();
@@ -105,28 +130,25 @@ router.delete('/:id', async (req, res) => {
     }
 });
 
-// --- Link a Textbook to a Class ---
+// --- Link/Unlink Routes ---
 router.post('/:classId/textbooks/:textbookId', async (req, res) => {
     const { classId, textbookId } = req.params;
     const userId = req.user.id;
     try {
         const targetClass = await Class.findOne({ where: { id: classId, userId: userId } });
         if (!targetClass) return res.status(404).json({ message: 'Class not found or permission denied.' });
+        // Prevent linking to special classes if desired
+        if (targetClass.classType === 'special') {
+            return res.status(400).json({ message: 'Cannot link textbooks to special classes.' });
+        }
         const targetTextbook = await Textbook.findByPk(textbookId);
         if (!targetTextbook) return res.status(404).json({ message: 'Textbook not found.' });
 
-        // Use the Sequelize helper method (uses the alias internally if defined)
         await targetClass.addTextbook(targetTextbook);
 
         console.log(`Linked textbook ${textbookId} to class ${classId}`);
-        // Return the updated class with its textbooks, using the alias
         const updatedClassWithTextbooks = await Class.findByPk(classId, {
-             include: [{
-                 model: Textbook,
-                 as: 'textbooks', // Use the alias
-                 attributes: ['id', 'title'],
-                 through: { attributes: [] }
-             }]
+             include: [{ model: Textbook, as: 'textbooks', attributes: ['id', 'title'], through: { attributes: [] } }]
         });
         res.status(200).json(updatedClassWithTextbooks);
     } catch (error) {
@@ -138,7 +160,6 @@ router.post('/:classId/textbooks/:textbookId', async (req, res) => {
     }
 });
 
-// --- Unlink a Textbook from a Class ---
 router.delete('/:classId/textbooks/:textbookId', async (req, res) => {
     const { classId, textbookId } = req.params;
     const userId = req.user.id;
@@ -148,7 +169,6 @@ router.delete('/:classId/textbooks/:textbookId', async (req, res) => {
         const targetTextbook = await Textbook.findByPk(textbookId);
         if (!targetTextbook) return res.status(404).json({ message: 'Textbook not found.' });
 
-        // Use the Sequelize helper method (uses the alias internally if defined)
         const result = await targetClass.removeTextbook(targetTextbook);
 
         if (result === 0) console.log(`Link between textbook ${textbookId} and class ${classId} did not exist.`);
@@ -161,4 +181,3 @@ router.delete('/:classId/textbooks/:textbookId', async (req, res) => {
 });
 
 module.exports = router;
-

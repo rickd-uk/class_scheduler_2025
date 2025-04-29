@@ -1,3 +1,4 @@
+// server/models/class.js
 'use strict';
 const {
   Model
@@ -10,43 +11,60 @@ module.exports = (sequelize, DataTypes) => {
      * The `models/index` file will call this method automatically.
      */
     static associate(models) {
-      // Association to the User who owns the class
-      Class.belongsTo(models.User, {
-        foreignKey: 'userId',
-        as: 'teacher' // Optional alias
-      });
-
-      // --- Add this association ---
-      // Define association here: A Class can belong to many Textbooks through ClassTextbooks
+      Class.belongsTo(models.User, { foreignKey: 'userId', as: 'teacher' });
       Class.belongsToMany(models.Textbook, {
-        through: 'ClassTextbooks', // The name of the join table
-        foreignKey: 'classId',      // The foreign key in the join table that points to Classes
-        otherKey: 'textbookId',     // The foreign key in the join table that points to Textbooks
-        as: 'textbooks'             // Explicit alias matching the include in classRoutes.js
+        through: 'ClassTextbooks',
+        foreignKey: 'classId',
+        otherKey: 'textbookId',
+        as: 'textbooks'
       });
-      // --- End added association ---
     }
   }
   Class.init({
-    // Renamed from 'name', stores class number (1-15)
     classNumber: {
-      type: DataTypes.STRING, // Keep as STRING for flexibility, validate in route
-      allowNull: false
+      type: DataTypes.STRING,
+      allowNull: true // Now nullable for special classes
     },
-    // Renamed from 'gradeLevel', stores year (1-6)
     yearLevel: {
-       type: DataTypes.STRING, // Keep as STRING, validate in route
-       allowNull: false // Make year level mandatory
+       type: DataTypes.STRING,
+       allowNull: true // Now nullable for special classes
     },
-    // 'subject' column is removed
     userId: {
       type: DataTypes.INTEGER,
       allowNull: false
+    },
+    // --- Add new fields ---
+    classType: {
+        type: DataTypes.STRING, // e.g., 'numbered', 'special'
+        allowNull: false,
+        defaultValue: 'numbered' // Default to numbered
+    },
+    className: {
+        type: DataTypes.STRING, // e.g., 'Global', 'Assembly'
+        allowNull: true // Only used for special types
     }
+    // --- End new fields ---
   }, {
     sequelize,
     modelName: 'Class',
+    tableName: 'classes', // Explicitly use lowercase table name
+     indexes: [
+       // Optional: Add unique constraint for special class names per user
+       // (Ensure migration 'classes_userId_className_unique' exists if using this)
+       // {
+       //   unique: true,
+       //   fields: ['userId', 'className'],
+       //   where: { classType: 'special' },
+       //   name: 'classes_userId_className_unique'
+       // },
+       // Optional: Add unique constraint for numbered classes per user
+       // {
+       //   unique: true,
+       //   fields: ['userId', 'yearLevel', 'classNumber'],
+       //   where: { classType: 'numbered' },
+       //   name: 'classes_userId_year_number_unique'
+       // }
+     ]
   });
   return Class;
 };
-

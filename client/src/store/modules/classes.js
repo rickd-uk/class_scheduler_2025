@@ -73,23 +73,22 @@ export default {
       }
     },
 
+    // Modified addClass action
     async addClass({ commit, dispatch }, classData) {
-        // No need for explicit loading state here usually, handled globally or via component
-        commit('SET_ERROR', null); // Clear previous errors
+        // classData should now contain { classType: 'numbered'|'special', ...other fields }
+        commit('SET_ERROR', null);
         try {
-            const response = await ClassesService.add(classData);
-            commit('ADD_CLASS', response.data); // Add the newly created class (returned by API) to state
+            console.log("[addClass Action] Received data:", classData); // Log received data
+            const response = await ClassesService.add(classData); // Send the structured data
+            commit('ADD_CLASS', response.data); // API returns class with textbooks array
             console.log('Added class via API:', response.data);
-             // Optionally dispatch success notification
-            // dispatch('ui/showNotification', { type: 'success', message: 'Class added successfully!' }, { root: true });
-            return response.data; // Return the new class data
+            dispatch('ui/showNotification', { type: 'success', message: 'Class added successfully!' }, { root: true });
+            return response.data;
         } catch (error) {
              const message = error.response?.data?.message || error.message || 'Failed to add class';
-             // Don't use SET_ERROR here as it might clear list on unrelated error
              console.error('Error adding class:', message);
-              // Optionally dispatch UI notification
-             // dispatch('ui/showNotification', { type: 'error', message }, { root: true });
-             throw new Error(message); // Re-throw for component handling
+             dispatch('ui/showNotification', { type: 'error', message }, { root: true });
+             throw new Error(message);
         }
     },
 
