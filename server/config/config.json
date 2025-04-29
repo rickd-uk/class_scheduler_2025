@@ -1,16 +1,16 @@
 {
   "development": {
-    "username": "scheduler_user",
-    "password": "cherry20254SCHEDULER",
-    "database": "scheduler_dev",
+    "username": "postgres",
+    "password": "postgres",
+    "database": "teacher_scheduler",
     "host": "db",
     "dialect": "postgres",
     "port": 5432
   },
   "test": {
-     "username": "scheduler_user",
-    "password": "cherry20254SCHEDULER",
-    "database": "scheduler_test",
+     "username": "postgres",
+    "password": "postgres",
+    "database": "teacher_scheduler_test",
     "host": "db",
     "dialect": "postgres",
     "port": 5432

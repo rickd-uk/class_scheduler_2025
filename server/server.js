@@ -6,8 +6,9 @@ const db = require('./models'); // Imports ./models/index.js by default
 // --- Route Imports ---
 const authRoutes = require('./routes/authRoutes');
 const classRoutes = require('./routes/classRoutes');
-const textbookRoutes = require('./routes/textbookRoutes'); // Import textbook routes
+const textbookRoutes = require('./routes/textbookRoutes');
 const scheduleRoutes = require('./routes/scheduleRoutes');
+const daysOffRoutes = require('./routes/daysOffRoutes'); // <-- Import Days Off routes
 // --- Middleware Imports ---
 const authenticateToken = require('./middleware/authenticateToken');
 
@@ -15,14 +16,16 @@ const authenticateToken = require('./middleware/authenticateToken');
 process.on('uncaughtException', (error) => {
   console.error('!!! UNCAUGHT EXCEPTION !!!');
   console.error(error);
-  // process.exit(1); // Consider exiting on uncaught exceptions
+  // Optionally exit gracefully - uncomment if needed, but might hide errors from nodemon restart
+  // process.exit(1);
 });
 
 process.on('unhandledRejection', (reason, promise) => {
   console.error('!!! UNHANDLED REJECTION !!!');
   console.error('Reason:', reason);
   console.error('Promise:', promise);
-  // process.exit(1); // Consider exiting on unhandled rejections
+  // Optionally exit gracefully
+  // process.exit(1);
 });
 // --- End Global Error Handlers ---
 
@@ -33,7 +36,7 @@ const app = express();
 const corsOptions = {
   // Use the value from .env or the compose file, fallback to default
   origin: process.env.CLIENT_URL || 'http://localhost:5173',
-  optionsSuccessStatus: 200
+  optionsSuccessStatus: 200 // some legacy browsers (IE11, various SmartTVs) choke on 204
 };
 app.use(cors(corsOptions));
 
@@ -49,8 +52,10 @@ app.get('/api', (req, res) => {
 // Mount routes
 app.use('/api/auth', authRoutes);
 app.use('/api/classes', authenticateToken, classRoutes); // Classes routes are protected
-app.use('/api/textbooks', textbookRoutes); // Mount textbook routes (add authenticateToken if needed)
-app.use('/api/schedule', authenticateToken, scheduleRoutes);
+app.use('/api/textbooks', textbookRoutes); // Add authenticateToken if textbooks become user-specific
+app.use('/api/schedule', authenticateToken, scheduleRoutes); // Schedule routes are protected
+// Mount days off routes under /api/days-off and apply authentication middleware
+app.use('/api/days-off', authenticateToken, daysOffRoutes); // <-- Mount Days Off routes (protected)
 
 // --- Error Handling Middleware (Should be last) ---
 app.use((err, req, res, next) => {
