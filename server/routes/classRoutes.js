@@ -138,9 +138,9 @@ router.post('/:classId/textbooks/:textbookId', async (req, res) => {
         const targetClass = await Class.findOne({ where: { id: classId, userId: userId } });
         if (!targetClass) return res.status(404).json({ message: 'Class not found or permission denied.' });
         // Prevent linking to special classes if desired
-        if (targetClass.classType === 'special') {
-            return res.status(400).json({ message: 'Cannot link textbooks to special classes.' });
-        }
+        //if (targetClass.classType === 'special') {
+        //    return res.status(400).json({ message: 'Cannot link textbooks to special classes.' });
+        //}
         const targetTextbook = await Textbook.findByPk(textbookId);
         if (!targetTextbook) return res.status(404).json({ message: 'Textbook not found.' });
 
