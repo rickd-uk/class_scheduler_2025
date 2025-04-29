@@ -49,7 +49,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue';
 import { useStore } from 'vuex';
 
 const store = useStore();
@@ -118,7 +118,9 @@ const handleLinkTextbook = async () => {
       classId: classData.value.id,
       textbookId: selectedTextbookId.value
     });
-    closeModal(); // Close modal on success
+    nextTick(() => {
+      closeModal(); // Close modal on success
+    })
   } catch (error) {
     // Display error if linking fails
     linkError.value = error.message || "Failed to link textbook.";
