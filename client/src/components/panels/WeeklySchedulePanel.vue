@@ -91,16 +91,22 @@ const capitalize = (s) => {
 
 // Helper function to find the full class details for a given day and period
 const getClassForSlot = (day, period) => {
-    const periodIndex = period - 1;
+   const periodIndex = period - 1;
+    // Ensure day exists in scheduleData before trying to access its index
     const scheduleItem = scheduleData.value?.[day]?.[periodIndex];
+    // If there's no item or it's null or has no classId, return null
     if (!scheduleItem || !scheduleItem.classId) {
-        return null;
+        return null; // No class assigned in schedule
     }
+
+    // Find the corresponding class details from the classes array
+    // Ensure we compare IDs correctly (e.g., handle string vs number if necessary)
     const classIdToFind = scheduleItem.classId;
-    // Find the full class object from the store
     const foundClass = classes.value.find(cls => String(cls.id) === String(classIdToFind));
-    // Return the found class object or null
-    return foundClass || null; // Return null if class definition not found
+
+    // *** CHANGE HERE: Return null if class not found (deleted) ***
+    // Return the found class object OR null if the classId from schedule doesn't exist anymore
+    return foundClass || null; 
 };
 
 // --- Lifecycle Hook ---

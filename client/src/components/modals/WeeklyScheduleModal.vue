@@ -104,13 +104,22 @@ watch(modalData, (currentSchedule) => {
     saveError.value = null; // Clear previous save errors
     initializeSchedule(); // Reset/ensure structure before populating
 
+    // Create a Set of existing class IDs for quick lookup
+    const existingClassIds = new Set(availableClasses.value.map(cls => cls.id));
+
     // If valid schedule data is passed from the store
     if (currentSchedule && typeof currentSchedule === 'object') {
         // Populate the local editableSchedule state based on the passed data
         daysOfWeek.forEach(day => {
             if (currentSchedule[day] && Array.isArray(currentSchedule[day])) {
                  // Map the stored data format [{classId: id}, null, ...] to just [id, null, ...]
-                 const dayScheduleIds = currentSchedule[day].map(item => item ? item.classId : null);
+                 const dayScheduleIds = currentSchedule[day].map(item => {
+                     // Check if the item exists and its classId is in the set of existing classes
+                     if (item && item.classId && existingClassIds.has(item.classId)) {
+                         return item.classId; // Keep valid classId
+                     }
+                     return null; // Treat as empty if item is null, no classId, or classId doesn't exist
+                 });  
                  // Ensure the array has the correct number of periods, padding with null if necessary
                  while (dayScheduleIds.length < periods.length) { dayScheduleIds.push(null); }
                  // Assign the processed array of IDs/nulls to the reactive state
