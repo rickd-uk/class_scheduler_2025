@@ -1,6 +1,7 @@
 /* Global Styles */
 :root {
-  --primary: #4b70e2;
+  /* --primary: #4b70e2;  */
+  --primary: #1f6c48;
   --primary-dark: #3a5bbf;
   --secondary: #6c757d;
   --success: #28a745;

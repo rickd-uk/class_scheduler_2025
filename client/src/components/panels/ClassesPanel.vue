@@ -77,7 +77,7 @@
                     </span>
                     <span v-else-if="cls.classType === 'special'" class="item-name special-class-name">
                         {{ cls.className }}
-                        <span v-if="cls.yearLevel" class="special-year-level">(Year {{ cls.yearLevel }})</span>
+                        <span v-if="cls.yearLevel" class="special-year-level">(Yr {{ cls.yearLevel }})</span>
                         <span v-else class="special-year-level">(All Years)</span>
                     </span>
                      <span v-else class="item-name">
@@ -88,8 +88,8 @@
                    <button
                       class="btn btn-sm btn-info"
                       @click="openLinkModal(cls)"
-                      title="Link Textbooks"
-                      :disabled="cls.classType === 'special'" > Link
+                      title="Link Textbooks">
+                      Link
                     </button>
                    <button
                       class="btn btn-sm btn-danger"
@@ -99,9 +99,23 @@
                     </button>
                 </div>
             </div>
-            <div v-if="cls.classType !== 'special' && cls.textbooks && cls.textbooks.length > 0" class="linked-textbooks">
-                </div>
-            <div v-if="cls.classType !== 'special' && (!cls.textbooks || cls.textbooks.length === 0)" class="linked-textbooks-empty">
+            <div v-if="cls.textbooks && cls.textbooks.length > 0" class="linked-textbooks">
+                <strong>Textbooks:</strong>
+                <ul>
+                    <li v-for="book in cls.textbooks" :key="book.id">
+                        <span>{{ book.title }}</span>
+                        <button
+                           class="btn-unlink"
+                           title="Unlink Textbook"
+                           @click="handleUnlinkTextbook(cls.id, book.id)"
+                           :disabled="unlinkingTextbookInfo?.classId === cls.id && unlinkingTextbookInfo?.textbookId === book.id"
+                        >
+                           &times;
+                        </button>
+                    </li>
+                </ul>
+            </div>
+            <div v-else class="linked-textbooks-empty">
                 No textbooks linked.
             </div>
          </li>
@@ -125,9 +139,8 @@ const deletingClassId = ref(null);
 const deleteError = ref(null);
 const unlinkingTextbookInfo = ref(null);
 const linkError = ref(null);
-// Updated reactive object for the form
 const newClass = reactive({
-  classType: 'numbered', // Default to numbered
+  classType: 'numbered',
   classNumber: '',
   yearLevel: '',
   className: ''
@@ -139,77 +152,84 @@ const isLoading = computed(() => store.getters['classes/isLoading']);
 const fetchError = computed(() => store.getters['classes/error']);
 
 // --- Methods ---
-// Reset form and clear conditional fields when type changes
 const resetConditionalFields = () => {
     newClass.classNumber = '';
-    // Don't reset yearLevel here, allow it for special type
-    // newClass.yearLevel = '';
     newClass.className = '';
-    addError.value = null; // Also clear error on type change
+    addError.value = null;
 };
-
 const resetForm = () => {
-    resetConditionalFields(); // Use the new helper
-    newClass.classType = 'numbered'; // Reset type to default
+    resetConditionalFields();
+    newClass.classType = 'numbered';
     newClass.yearLevel = '';
     isAdding.value = false;
 };
-
 const handleAddClass = async () => {
     isAdding.value = true;
     addError.value = null;
     let dataToSend = {
         classType: newClass.classType,
-        yearLevel: newClass.yearLevel || null // Send null if empty string
+        yearLevel: newClass.yearLevel || null
     };
-
     if (newClass.classType === 'numbered') {
         if (!newClass.classNumber || !newClass.yearLevel) {
             addError.value = "Please select Class Number and Year Level for numbered classes.";
-            isAdding.value = false;
-            return;
+            isAdding.value = false; return;
         }
         dataToSend.classNumber = newClass.classNumber;
     } else if (newClass.classType === 'special') {
         if (!newClass.className || newClass.className.trim() === '') {
              addError.value = "Please enter a name for the special class.";
-             isAdding.value = false;
-             return;
+             isAdding.value = false; return;
         }
          dataToSend.className = newClass.className.trim();
     } else {
          addError.value = "Invalid class type selected.";
-         isAdding.value = false;
-         return;
+         isAdding.value = false; return;
     }
-
     try {
         await store.dispatch('classes/addClass', dataToSend);
-        resetForm();
-        showAddForm.value = false;
-    } catch (error) {
-        addError.value = error.message || "Failed to add class.";
-    } finally {
-        isAdding.value = false;
-    }
+        resetForm(); showAddForm.value = false;
+    } catch (error) { addError.value = error.message || "Failed to add class."; }
+    finally { isAdding.value = false; }
 };
 
+// Handles clicking the delete button for a class
 const handleDeleteClass = async (id) => {
-    if (!confirm(`Are you sure you want to delete this class?`)) { return; }
+    console.log(`[ClassesPanel] handleDeleteClass called for ID: ${id}`); // Log 1
+    // --- REMOVED Confirmation Dialog ---
+    // if (!confirm(`Are you sure you want to delete this class?`)) {
+    //      console.log(`[ClassesPanel] Deletion cancelled by user for ID: ${id}`); // Log 2 (if cancelled)
+    //     return; // Stop if user cancels
+    // }
+    // console.log(`[ClassesPanel] Deletion confirmed (or bypassed) for ID: ${id}. Proceeding...`); // Log 3 (if confirmed/bypassed)
+    // --- End Removal ---
+
+    // Set loading state for the specific delete button
     deletingClassId.value = id;
-    deleteError.value = null;
+    deleteError.value = null; // Clear previous delete errors
+
     try {
-        await store.dispatch('classes/deleteClass', id);
+        console.log(`[ClassesPanel] Dispatching classes/deleteClass for ID: ${id}`); // Log 4
+        // Dispatch action to delete the class via API
+        await store.dispatch('classes/deleteClass', id); // <-- Ensure this dispatch exists
+         console.log(`[ClassesPanel] Dispatch successful for ID: ${id}`); // Log 5
+        // Class is removed from the list reactively by the store mutation
     } catch (error) {
+        console.error(`[ClassesPanel] Error during delete dispatch for ID: ${id}`, error); // Log 6 (if error)
+        // Set error message and show an alert if deleting fails
         deleteError.value = error.message || "Failed to delete class.";
-        alert(`Error: ${deleteError.value}`);
+        alert(`Error: ${deleteError.value}`); // Simple alert for now
     } finally {
+        console.log(`[ClassesPanel] Resetting delete state for ID: ${id}`); // Log 7
+        // Reset the loading state for the delete button
         deletingClassId.value = null;
     }
 };
 
 const handleUnlinkTextbook = async (classId, textbookId) => {
-    if (!confirm(`Are you sure you want to unlink this textbook?`)) { return; }
+    // --- REMOVED Confirmation Dialog ---
+    // if (!confirm(`Are you sure you want to unlink this textbook?`)) { return; }
+    // --- End Removal ---
     unlinkingTextbookInfo.value = { classId, textbookId };
     linkError.value = null;
     try {
@@ -221,76 +241,29 @@ const handleUnlinkTextbook = async (classId, textbookId) => {
         unlinkingTextbookInfo.value = null;
     }
 };
-
 const openLinkModal = (cls) => {
-    if (cls.classType === 'special') {
-        alert("Cannot link textbooks to special classes.");
-        return;
-    }
     console.log("Opening link modal for class:", cls);
-    store.dispatch('ui/openModal', {
-        modalName: 'linkTextbookModal',
-        data: cls
-    });
+    store.dispatch('ui/openModal', { modalName: 'linkTextbookModal', data: cls });
 };
-
-// Helper to quickly set className
-const setClassName = (name) => {
-    newClass.className = name;
-};
+const setClassName = (name) => { newClass.className = name; };
 
 // --- Lifecycle Hook ---
 onMounted(() => {
-  if (classes.value.length === 0 && !isLoading.value) {
-    store.dispatch('classes/fetchClasses');
-  }
-  if (store.getters['textbooks/allTextbooks'].length === 0) {
-      store.dispatch('textbooks/fetchTextbooks');
-  }
+  if (classes.value.length === 0 && !isLoading.value) { store.dispatch('classes/fetchClasses'); }
+  if (store.getters['textbooks/allTextbooks'].length === 0) { store.dispatch('textbooks/fetchTextbooks'); }
 });
 
 </script>
 
 <style scoped>
 /* Add styles for radio group and special class name */
-.add-form .radio-group {
-    display: flex;
-    gap: 1rem;
-    margin-bottom: 1rem;
-    align-items: center; /* Align items vertically */
-}
-.add-form .radio-group label {
-    display: flex;
-    align-items: center;
-    gap: 0.3rem;
-    font-weight: normal;
-    cursor: pointer;
-    margin-bottom: 0; /* Override default label margin */
-}
-/* Ensure radio buttons align well */
-.add-form .radio-group input[type="radio"] {
-    margin-top: 0; /* Adjust vertical alignment if needed */
-    margin-right: 0.2rem;
-}
-.special-class-name {
-    font-style: italic;
-    color: var(--primary); /* Optional: different color for special classes */
-}
-.btn-link { /* Simple link-like button */
-    background: none;
-    border: none;
-    color: var(--primary);
-    text-decoration: underline;
-    padding: 0.2rem;
-    font-size: 0.8rem;
-    cursor: pointer;
-    margin-left: 0.5rem;
-}
-.btn-link:hover {
-    color: var(--primary-dark);
-}
-
-/* Other styles */
+.add-form .radio-group { display: flex; gap: 1rem; margin-bottom: 1rem; align-items: center; }
+.add-form .radio-group label { display: flex; align-items: center; gap: 0.3rem; font-weight: normal; cursor: pointer; margin-bottom: 0; }
+.add-form .radio-group input[type="radio"] { margin-top: 0; margin-right: 0.2rem; }
+.special-class-name { font-style: italic; color: var(--primary); }
+.special-year-level { font-size: 0.8em; color: var(--secondary); margin-left: 0.5em; }
+.btn-link { background: none; border: none; color: var(--primary); text-decoration: underline; padding: 0.2rem; font-size: 0.8rem; cursor: pointer; margin-left: 0.5rem; }
+.btn-link:hover { color: var(--primary-dark); }
 .panel-body { max-height: 400px; overflow-y: auto; padding-top: 0; }
 .add-form { padding: 1rem; margin-bottom: 1rem; border: 1px solid var(--border-color); border-radius: var(--border-radius); background-color: var(--light); }
 .add-form h4 { margin-top: 0; margin-bottom: 1rem; font-size: 1rem; font-weight: 600; }
