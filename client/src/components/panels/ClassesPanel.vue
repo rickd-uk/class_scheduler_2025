@@ -73,7 +73,7 @@
             <div class="class-main-info">
                 <div class="item-details">
                     <span v-if="cls.classType === 'numbered'" class="item-name">
-                        Year {{ cls.yearLevel }} - Class {{ cls.classNumber }}
+                      {{ formatNumberedClassName(cls) }}
                     </span>
                     <span v-else-if="cls.classType === 'special'" class="item-name special-class-name">
                         {{ cls.className }}
@@ -246,6 +246,19 @@ const openLinkModal = (cls) => {
     store.dispatch('ui/openModal', { modalName: 'linkTextbookModal', data: cls });
 };
 const setClassName = (name) => { newClass.className = name; };
+
+// --- Add Formatting Helper ---
+const formatNumberedClassName = (cls) => {
+    if (!cls || cls.classType !== 'numbered' || !cls.yearLevel || !cls.classNumber) {
+        return 'Invalid Class'; // Fallback
+    }
+    const yearNum = parseInt(cls.yearLevel, 10);
+    const displayYear = yearNum <= 3 ? yearNum : yearNum - 3; // Calculate 1, 2, 3 for HS years
+    const schoolSuffix = yearNum <= 3 ? 'J' : 'H'; // J for Junior High, H for High School
+    return `${displayYear}${schoolSuffix}-${cls.classNumber}`;
+};
+
+
 
 // --- Lifecycle Hook ---
 onMounted(() => {

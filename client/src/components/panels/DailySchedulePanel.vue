@@ -228,11 +228,14 @@ const loadDailySchedule = () => {
          let displayClassName = null;
          if (cls) { // If class details were found
              if (cls.classType === 'numbered') {
-                 displayClassName = `Yr ${cls.yearLevel} - Cls ${cls.classNumber}`;
+                 const yearNum = parseInt(cls.yearLevel, 10);
+                 const displayYear = yearNum <= 3 ? yearNum : yearNum - 3;  // Calculate 1, 2, 3 for HS years
+                 const schoolSuffix = yearNum <= 3 ? 'J' : 'H'; // J for Junior High, H for High School
+                 displayClassName = `${displayYear}${schoolSuffix}-${cls.classNumber}`;
              } else if (cls.classType === 'special') {
                  displayClassName = cls.className;
                  if (cls.yearLevel) {
-                     displayClassName += ` (Yr ${cls.yearLevel})`;
+                     displayClassName += ` (${cls.yearLevel})`;
                  }
              } else {
                  displayClassName = 'Unknown Class Type';
