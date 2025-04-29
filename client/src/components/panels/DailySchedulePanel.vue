@@ -4,9 +4,14 @@
         <button @click="goToPreviousMonth" class="nav-button month-nav" title="Previous Month">&lt;&lt;</button>
         <button @click="goToPreviousDay" class="nav-button day-nav" title="Previous Day">&lt;</button>
 
-        <h2 class="panel-title date-title" @click="showDatePicker = !showDatePicker" title="Click to select date">
-            {{ formattedDate }}
-        </h2>
+        <div class="date-display-container">
+            <h2 class="panel-title date-title" @click="showDatePicker = !showDatePicker" title="Click to select date">
+                {{ formattedDate }}
+            </h2>
+            <span v-if="relativeDateString" class="relative-date-indicator">
+                ({{ relativeDateString }})
+            </span>
+        </div>
         <input
             v-if="showDatePicker"
             type="date"
@@ -56,13 +61,16 @@ import { useStore } from 'vuex';
 const store = useStore();
 
 // --- Helper Functions ---
-
 /**
  * Converts a Date object to a 'YYYY-MM-DD' string, handling timezone offset.
  * @param {Date} date - The date object.
  * @returns {string} Date string in 'YYYY-MM-DD' format.
  */
 const toYYYYMMDD = (date) => {
+    if (!(date instanceof Date) || isNaN(date.getTime())) {
+        console.warn("[toYYYYMMDD] Invalid date object received:", date);
+        return null; // Return null for invalid dates
+    }
     // Create a new date adjusted for the local timezone offset
     const offset = date.getTimezoneOffset() * 60000;
     const localDate = new Date(date.getTime() - offset);
@@ -117,21 +125,71 @@ const selectedDate = ref(getTodayDateString()); // Initialize with today
 const dailySchedule = ref([]);
 const isLoading = ref(false);
 const error = ref(null);
-const showDatePicker = ref(false); // State to toggle date picker visibility
-const datePickerInput = ref(null); // Ref for the date input element
+const showDatePicker = ref(false);
+const datePickerInput = ref(null);
 
 // --- Computed Properties ---
 const regularSchedule = computed(() => store.getters['schedule/regularSchedule']);
 const exceptions = computed(() => store.getters['schedule/dailyExceptions']);
 const daysOff = computed(() => store.getters['daysOff/allDaysOff']);
 const classes = computed(() => store.getters['classes/allClasses']);
-// Formatted date for the title display
 const formattedDate = computed(() => formatDate(selectedDate.value));
-const isDayOff = computed(() => { /* ... keep existing ... */ });
-const dayOffReason = computed(() => { /* ... keep existing ... */ });
+const isDayOff = computed(() => {
+    if (!selectedDate.value) return false;
+    const isGlobalDayOff = store.getters['daysOff/isDayOff'](selectedDate.value);
+    const exceptionInfo = exceptions.value.find(e => e.date === selectedDate.value);
+    return isGlobalDayOff || (exceptionInfo && exceptionInfo.isDayOff);
+});
+const dayOffReason = computed(() => {
+    if (!isDayOff.value) return '';
+    const exceptionInfo = exceptions.value.find(e => e.date === selectedDate.value);
+    if (exceptionInfo && exceptionInfo.isDayOff) return exceptionInfo.reason || 'Day Off (Exception)';
+    const dayOffInfo = daysOff.value.find(d => d.date === selectedDate.value);
+    if (dayOffInfo) return dayOffInfo.reason;
+    return 'Day Off';
+});
+
+// --- Computed Property for Relative Date (Restored) ---
+const relativeDateString = computed(() => {
+    if (!selectedDate.value) return '';
+    const todayStr = getTodayDateString();
+    if (!todayStr) return ''; // Handle error from helper
+
+    if (selectedDate.value === todayStr) {
+        return 'Today';
+    }
+
+    // Calculate yesterday
+    const yesterdayDate = new Date(); // Today's date object
+    yesterdayDate.setDate(yesterdayDate.getDate() - 1); // Set to yesterday
+    const yesterdayStr = toYYYYMMDD(yesterdayDate); // Format as string
+    if (yesterdayStr && selectedDate.value === yesterdayStr) {
+        return 'Yesterday';
+    }
+
+    // Calculate tomorrow
+    const tomorrowDate = new Date(); // Today's date object
+    tomorrowDate.setDate(tomorrowDate.getDate() + 1); // Set to tomorrow
+    const tomorrowStr = toYYYYMMDD(tomorrowDate); // Format as string
+     if (tomorrowStr && selectedDate.value === tomorrowStr) {
+        return 'Tomorrow';
+    }
+
+    // Calculate 2 days ago
+    const twoDaysAgoDate = new Date();
+    twoDaysAgoDate.setDate(twoDaysAgoDate.getDate() - 2);
+    const twoDaysAgoStr = toYYYYMMDD(twoDaysAgoDate);
+    if (twoDaysAgoStr && selectedDate.value === twoDaysAgoStr) {
+        return '2 Days Ago';
+    }
+    // Add more conditions here for "X Days Ago/From Now" if desired
+
+    // Otherwise, return empty string (no indicator needed)
+    return '';
+});
+
 
 // --- Methods ---
-
 /**
  * Parses the current selectedDate string into a Date object.
  * Handles potential invalid date strings.
@@ -140,13 +198,10 @@ const dayOffReason = computed(() => { /* ... keep existing ... */ });
 const getCurrentDateObject = () => {
     if (!selectedDate.value) return null;
     try {
-        // Important: Add time to ensure it's interpreted consistently across timezones
-        const date = new Date(selectedDate.value + 'T12:00:00');
+        const date = new Date(selectedDate.value + 'T12:00:00'); // Add time component
         if (isNaN(date.getTime())) return null;
         return date;
-    } catch (e) {
-        return null;
-    }
+    } catch (e) { return null; }
 };
 
 /**
@@ -155,25 +210,21 @@ const getCurrentDateObject = () => {
  */
 const changeDay = (daysToAdd) => {
     const currentDate = getCurrentDateObject();
-    if (!currentDate) return; // Don't navigate if current date is invalid
+    if (!currentDate) return;
     currentDate.setDate(currentDate.getDate() + daysToAdd);
-    selectedDate.value = toYYYYMMDD(currentDate); // Update the ref, triggering watcher
+    selectedDate.value = toYYYYMMDD(currentDate);
 };
 
 /**
  * Navigates the selectedDate by a specified number of months.
- * Handles month/year rollovers correctly.
  * @param {number} monthsToAdd - The number of months to add (can be negative).
  */
 const changeMonth = (monthsToAdd) => {
     const currentDate = getCurrentDateObject();
     if (!currentDate) return;
-    // Set the date to the 1st of the month before changing month to avoid day-of-month issues
-    currentDate.setDate(1);
+    currentDate.setDate(1); // Go to 1st to avoid day overflow issues
     currentDate.setMonth(currentDate.getMonth() + monthsToAdd);
-    // Keep the original day if possible, otherwise it defaults (handled by Date object)
-    // We don't need to manually handle day adjustment here for simple month jumps.
-    selectedDate.value = toYYYYMMDD(currentDate); // Update the ref
+    selectedDate.value = toYYYYMMDD(currentDate);
 };
 
 // Navigation button handlers
@@ -185,26 +236,22 @@ const goToNextMonth = () => changeMonth(1);
 // Watcher to focus the date picker when it becomes visible
 watch(showDatePicker, async (newValue) => {
     if (newValue) {
-        // Wait for the DOM to update before trying to focus
         await nextTick();
         datePickerInput.value?.focus();
-        datePickerInput.value?.showPicker(); // Try to programmatically open the picker UI
+        datePickerInput.value?.showPicker();
     }
 });
 
-
 // Loads and calculates the schedule for the currently selected date
 const loadDailySchedule = () => {
-  // Hide date picker when date changes via picker itself
-  showDatePicker.value = false;
-
+  showDatePicker.value = false; // Hide picker on change
   isLoading.value = true;
   error.value = null;
   let finalSchedule = [];
 
   if (!selectedDate.value) { /* ... handle no date ... */ return; }
   console.log(`[DailySchedulePanel] Loading schedule for date: ${selectedDate.value}`);
-  if (isDayOff.value) { /* ... handle day off ... */ return; }
+  if (isDayOff.value) { /* ... handle day off ... */ isLoading.value = false; dailySchedule.value = []; return; }
 
   try {
     const dayOfWeek = getDayOfWeek(selectedDate.value);
@@ -217,9 +264,7 @@ const loadDailySchedule = () => {
     // Create initial schedule from base, adding time based on period index
     finalSchedule = baseSchedule
         .map((item, index) => {
-            if (item && item.classId) {
-                return { classId: item.classId, time: periodTimes[index] || `P${index + 1}`, isException: false };
-            }
+            if (item && item.classId) { return { classId: item.classId, time: periodTimes[index] || `P${index + 1}`, isException: false }; }
             return null;
         })
         .filter(item => item !== null);
@@ -258,22 +303,23 @@ const loadDailySchedule = () => {
 };
 
 // Opens the modal for editing daily exceptions
-const openExceptionModal = () => { /* ... keep existing ... */ };
+const openExceptionModal = () => {
+    if (!selectedDate.value) return;
+    console.log("Trigger Edit Exception Modal for:", selectedDate.value);
+    const existingException = exceptions.value.find(e => e.date === selectedDate.value);
+    store.dispatch('ui/openModal', { modalName: 'dailyException', data: { date: selectedDate.value, exception: existingException } });
+};
 
 // --- Watchers & Lifecycle ---
 onMounted(() => {
-  // Fetch necessary data on component mount if not already loaded
   if (!regularSchedule.value || Object.keys(regularSchedule.value).length === 0) { store.dispatch('schedule/fetchRegularSchedule'); }
   if (exceptions.value.length === 0) { store.dispatch('schedule/fetchDailyExceptions'); }
   if (daysOff.value.length === 0) { store.dispatch('daysOff/fetchDaysOff'); }
   if (classes.value.length === 0) { store.dispatch('classes/fetchClasses'); }
-  // Load schedule for the initial date (today)
   nextTick(() => { loadDailySchedule(); });
 });
 
-// Reload schedule when the selected date changes (via picker or buttons)
 watch(selectedDate, loadDailySchedule);
-// Reload schedule if the underlying data sources change
 watch([regularSchedule, exceptions, daysOff, classes], loadDailySchedule, { deep: true });
 
 </script>
@@ -292,74 +338,18 @@ watch([regularSchedule, exceptions, daysOff, classes], loadDailySchedule, { deep
 .error-message { color: var(--danger); background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: var(--border-radius); }
 
 /* Updated Header Styles */
-.panel-header.date-navigation {
-    display: flex;
-    justify-content: space-between; /* Space out elements */
-    align-items: center;
-    flex-wrap: nowrap; /* Prevent wrapping */
-    gap: 0.5rem; /* Space between buttons/title */
-    margin-bottom: 0.5rem; /* Reduce bottom margin */
-    position: relative; /* Needed for overlay positioning */
-}
-.date-title {
-    margin: 0;
-    font-weight: 600; /* Make title bold */
-    font-size: 1.1rem; /* Adjust size */
-    text-align: center;
-    flex-grow: 1; /* Allow title to take space */
-    cursor: pointer; /* Indicate it's clickable */
-    padding: 0.2rem 0.5rem;
-    border-radius: var(--border-radius);
-    transition: background-color 0.2s;
-}
-.date-title:hover {
-    background-color: #eee;
-}
-.nav-button {
-    background: none;
-    border: 1px solid transparent;
-    padding: 0.1rem 0.5rem;
-    font-size: 1.2rem;
-    font-weight: bold;
-    line-height: 1;
-    cursor: pointer;
-    color: var(--primary);
-    border-radius: 4px;
-    transition: background-color 0.2s;
-}
-.nav-button:hover {
-    background-color: #e0e0e0;
-}
-.nav-button.month-nav {
-    font-size: 1rem; /* Slightly smaller for month arrows */
-}
-
-/* Style for the date picker when shown as overlay */
-.date-picker-overlay {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    z-index: 10; /* Ensure it's above the title */
-    padding: 0.3rem 0.5rem;
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius);
-    font-size: 0.9rem;
-    max-width: 180px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-}
-/* Remove default date picker from flow */
-.date-picker {
-    /* Keep this if you want the original input always visible */
-    /* padding: 0.3rem 0.5rem; max-width: 180px; border: 1px solid var(--border-color); border-radius: var(--border-radius); font-size: 0.9rem; */
-    display: none; /* Hide original if using overlay approach */
-}
-/* Divider below header */
-.header-divider {
-    border: none;
-    border-top: 1px solid var(--border-color);
-    margin-top: 0.5rem;
-    margin-bottom: 1rem;
-}
+.panel-header.date-navigation { display: flex; justify-content: space-between; align-items: center; flex-wrap: nowrap; gap: 0.5rem; margin-bottom: 0.5rem; position: relative; }
+/* Container for Title and Relative Indicator */
+.date-display-container { display: flex; flex-direction: column; align-items: center; flex-grow: 1; }
+.date-title { margin: 0; font-weight: 600; font-size: 1.1rem; text-align: center; cursor: pointer; padding: 0.2rem 0.5rem; border-radius: var(--border-radius); transition: background-color 0.2s; }
+.date-title:hover { background-color: #eee; }
+/* Style for the relative date indicator */
+.relative-date-indicator { font-size: 0.8rem; color: var(--secondary); font-weight: normal; margin-top: -2px; /* Adjust spacing */ }
+.nav-button { background: none; border: 1px solid transparent; padding: 0.1rem 0.5rem; font-size: 1.2rem; font-weight: bold; line-height: 1; cursor: pointer; color: var(--primary); border-radius: 4px; transition: background-color 0.2s; }
+.nav-button:hover { background-color: #e0e0e0; }
+.nav-button.month-nav { font-size: 1rem; }
+.date-picker-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10; padding: 0.3rem 0.5rem; border: 1px solid var(--border-color); border-radius: var(--border-radius); font-size: 0.9rem; max-width: 180px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+.date-picker { display: none; }
+.header-divider { border: none; border-top: 1px solid var(--border-color); margin-top: 0.5rem; margin-bottom: 1rem; }
 </style>
 
