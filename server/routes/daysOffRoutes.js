@@ -66,6 +66,52 @@ router.post('/', async (req, res) => {
   }
 });
 
+// --- PUT (Update) a Day Off by Date (for the logged-in user) ---
+// Using date in the URL parameter (YYYY-MM-DD)
+router.put('/:date', async (req, res) => {
+    const dateToUpdate = req.params.date;
+    const { reason } = req.body; // Only allow updating the reason for now
+    const userId = req.user.id;
+
+    // Validate date format
+    if (!dateToUpdate || !/^\d{4}-\d{2}-\d{2}$/.test(dateToUpdate)) {
+        return res.status(400).json({ message: 'Valid date (YYYY-MM-DD) parameter is required.' });
+    }
+
+    try {
+        console.log(`[PUT /api/days-off] Attempting to update day off for user ${userId} on date: ${dateToUpdate}`);
+        // Find the specific day off entry for this user and date
+        const dayOffToUpdate = await DayOff.findOne({
+            where: {
+                date: dateToUpdate,
+                userId: userId
+            }
+        });
+
+        if (!dayOffToUpdate) {
+            console.log(`[PUT /api/days-off] Day off not found for user ${userId} on date: ${dateToUpdate}`);
+            return res.status(404).json({ message: 'Day off not found for this date or permission denied.' });
+        }
+
+        // Update the reason
+        dayOffToUpdate.reason = reason || null; // Allow setting reason to null/empty
+
+        // Save the changes
+        await dayOffToUpdate.save();
+        console.log(`[PUT /api/days-off] Successfully updated day off for user ${userId} on date: ${dateToUpdate}`);
+        res.status(200).json(dayOffToUpdate); // Return the updated record
+
+    } catch (error) {
+        console.error(`[PUT /api/days-off] Error updating day off for user ${userId} on date: ${dateToUpdate}`, error);
+         if (error.name === 'SequelizeValidationError') {
+            const messages = error.errors.map(err => err.message);
+            return res.status(400).json({ message: 'Validation failed', errors: messages });
+        }
+        res.status(500).json({ message: 'Server error updating day off.', error: error.message });
+    }
+});
+
+
 // --- DELETE a Day Off by Date (for the logged-in user) ---
 // Using date in the URL parameter (YYYY-MM-DD)
 router.delete('/:date', async (req, res) => {

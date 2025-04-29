@@ -52,11 +52,30 @@
       </div>
     </main>
 
-    <TemplateEditorModal v-if="store.state.ui.modals.templateEditor" />
-    <DailyExceptionModal v-if="store.state.ui.modals.dailyException" />
-    <WeeklyScheduleModal v-if="store.state.ui.modals.weeklySchedule" />
-    <TextbookEditorModal v-if="store.state.ui.modals.textbookEditor" />
-    <LinkTextbookModal v-if="store.state.ui.modals.linkTextbookModal" />
+    <TemplateEditorModal
+        v-if="store.state.ui.modals.templateEditor"
+        :key="'templateEditor-' + store.state.ui.modals.templateEditor"
+    />
+    <DailyExceptionModal
+        v-if="store.state.ui.modals.dailyException"
+        :key="'dailyException-' + store.state.ui.modals.dailyException"
+     />
+    <WeeklyScheduleModal
+        v-if="store.state.ui.modals.weeklySchedule"
+        :key="'weeklySchedule-' + store.state.ui.modals.weeklySchedule"
+    />
+    <TextbookEditorModal
+        v-if="store.state.ui.modals.textbookEditor"
+        :key="'textbookEditor-' + store.state.ui.modals.textbookEditor"
+    />
+    <LinkTextbookModal
+        v-if="store.state.ui.modals.linkTextbookModal"
+        :key="'linkTextbookModal-' + store.state.ui.modals.linkTextbookModal"
+    />
+    <DayOffEditorModal
+        v-if="store.state.ui.modals.dayOffEditor"
+        :key="'dayOffEditor-' + store.state.ui.modals.dayOffEditor"
+    />
     </div>
 </template>
 
@@ -80,8 +99,8 @@ import TemplateEditorModal from './components/modals/TemplateEditorModal.vue'
 import DailyExceptionModal from './components/modals/DailyExceptionModal.vue'
 import WeeklyScheduleModal from './components/modals/WeeklyScheduleModal.vue'
 import TextbookEditorModal from './components/modals/TextbookEditorModal.vue'
-// --- Add the import for LinkTextbookModal ---
 import LinkTextbookModal from './components/modals/LinkTextbookModal.vue'
+import DayOffEditorModal from './components/modals/DayOffEditorModal.vue'
 
 
 // Auth Imports
@@ -102,6 +121,15 @@ watch(() => store.state.ui.modals.weeklySchedule, (newValue, oldValue) => {
 });
 watch(() => store.state.ui.modals.linkTextbookModal, (newValue, oldValue) => {
   console.log(`[App.vue Watcher] linkTextbookModal modal state changed from ${oldValue} to ${newValue}`);
+});
+watch(() => store.state.ui.modals.templateEditor, (newValue, oldValue) => {
+  console.log(`[App.vue Watcher] templateEditor modal state changed from ${oldValue} to ${newValue}`);
+});
+watch(() => store.state.ui.modals.dailyException, (newValue, oldValue) => {
+  console.log(`[App.vue Watcher] dailyException modal state changed from ${oldValue} to ${newValue}`);
+});
+watch(() => store.state.ui.modals.dayOffEditor, (newValue, oldValue) => {
+  console.log(`[App.vue Watcher] dayOffEditor modal state changed from ${oldValue} to ${newValue}`);
 });
 
 

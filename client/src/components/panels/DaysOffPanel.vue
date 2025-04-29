@@ -32,6 +32,12 @@
             </div>
             <div class="item-actions">
                <button
+                  class="btn btn-sm btn-secondary"
+                  @click="handleEditClick(day)"
+                  title="Edit Reason">
+                   Edit
+               </button>
+               <button
                   class="btn btn-sm btn-danger"
                   @click="handleDeleteDayOff(day.date)"
                   :disabled="deletingDate === day.date"
@@ -103,6 +109,16 @@ const handleAddDayOff = async () => {
         // Always reset loading state
         isAdding.value = false;
     }
+};
+
+const handleEditClick = (dayOff) => {
+    console.log("Opening edit modal for day off:", dayOff);
+    // Dispatch action to open the modal and pass the full day off object
+    // The modal component will use this data (specifically date and reason)
+    store.dispatch('ui/openModal', {
+        modalName: 'dayOffEditor', // Use the modal name defined in ui.js state
+        data: dayOff // Pass the day off object (action deep copies)
+    });
 };
 
 // Handles clicking the delete button for a day off

@@ -29,6 +29,21 @@ const DaysOffService = {
     return ApiService.post(DAYS_OFF_ENDPOINT, dayOffData);
   },
 
+/**
+   * Updates the reason for an existing day off.
+   * @param {string} date - The date of the day off to update ('YYYY-MM-DD').
+   * @param {object} data - Object containing the updated reason (e.g., { reason: 'New Reason' }).
+   * @returns {Promise<AxiosResponse<any>>} Promise resolving with the API response containing the updated day off object.
+   */
+  update(date, data) {
+     const url = `${DAYS_OFF_ENDPOINT}/${date}`;
+     console.log(`DaysOffService: Updating day off for date ${date} via PUT ${url}`);
+     // Uses the generic ApiService PUT method
+     return ApiService.put(url, data); // Send PUT request with new data
+  },
+
+
+
   /**
    * Deletes a specific day off by date for the authenticated user.
    * @param {string} date - The date to delete ('YYYY-MM-DD').

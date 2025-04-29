@@ -7,7 +7,8 @@ export default {
       dailyException: false,
       weeklySchedule: false,
       textbookEditor: false,
-      linkTextbookModal: false // Add state for the link modal
+      linkTextbookModal: false, // Add state for the link modal
+      dayOffEditor: false,
       // classEditor: false,
     },
     modalData: {
@@ -15,7 +16,9 @@ export default {
       dailyException: null,
       weeklySchedule: null,
       textbookEditor: null,
-      linkTextbookModal: null // Add state for link modal data (the class object)
+      linkTextbookModal: null, // Add state for link modal data (the class object)
+
+      dayOffEditor: null,
       // classEditor: null,
     },
     isLoading: false,
@@ -60,9 +63,21 @@ export default {
       console.log(`[UI Store Action] closeModal called for: ${modalName}`);
       commit('CLOSE_MODAL', modalName);
     },
+
+
     // Other actions...
     setLoading({ commit }, isLoading) { commit('SET_LOADING', isLoading); },
-    showNotification({ commit }, { type = 'info', message, duration = 3000 }) { /* ... */ },
+
+    showNotification({ commit }, { type = 'info', message, duration = 3000 }) {
+      commit('SET_NOTIFICATION', { type, message });
+      // Automatically clear notification after duration
+      if (duration > 0) {
+        setTimeout(() => {
+          commit('CLEAR_NOTIFICATION');
+        }, duration);
+      }
+    },
+
     clearNotification({ commit }) { commit('CLEAR_NOTIFICATION'); }
   },
 

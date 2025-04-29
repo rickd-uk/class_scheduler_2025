@@ -27,6 +27,18 @@ export default {
       // Filter out the day off with the matching date string
       state.daysOff = state.daysOff.filter(d => d.date !== date);
     },
+    // --- Add UPDATE_DAY_OFF mutation ---
+    UPDATE_DAY_OFF(state, updatedDayOff) {
+        const index = state.daysOff.findIndex(d => d.id === updatedDayOff.id); // Find by ID
+        if (index !== -1) {
+            // Replace item in array to maintain reactivity
+            state.daysOff.splice(index, 1, updatedDayOff);
+            // Re-sort if necessary (though usually not needed for update)
+            state.daysOff.sort((a, b) => a.date.localeCompare(b.date));
+        } else {
+            console.warn(`Could not find day off with ID ${updatedDayOff.id} to update in state.`);
+        }
+    },
     // Sets the loading state for this module
     SET_LOADING(state, isLoading) {
       state.isLoading = isLoading;
@@ -92,6 +104,25 @@ export default {
              throw new Error(message); // Re-throw the error so the component can catch it if needed
         }
      },
+
+    // --- Add updateDayOff action ---
+    async updateDayOff({ commit, dispatch }, { date, data }) {
+        // data should be { reason: '...' }
+        commit('SET_ERROR', null);
+        try {
+            const response = await DaysOffService.update(date, data);
+            commit('UPDATE_DAY_OFF', response.data); // Commit mutation with updated data from API
+            console.log(`Updated day off for ${date} via API:`, response.data);
+            dispatch('ui/showNotification', { type: 'success', message: 'Day off updated successfully!' }, { root: true });
+            return response.data;
+        } catch (error) {
+             const message = error.response?.data?.message || error.message || 'Failed to update day off';
+             console.error(`Error updating day off for ${date}:`, message);
+             dispatch('ui/showNotification', { type: 'error', message }, { root: true });
+             throw new Error(message);
+        }
+    },
+
 
      // Action to delete a day off for the logged-in user by date
      async deleteDayOff({ commit, dispatch }, date) {
