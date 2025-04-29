@@ -20,7 +20,12 @@
     <div v-if="isLoading" class="loading">Loading schedule...</div>
     <div v-else-if="error" class="error-message">{{ error }}</div>
     <div v-else class="schedule-content">
-        <div v-if="isDayOff" class="day-off-notice" :style="{ borderLeftColor: dayOffColor }">
+          <div
+            v-if="isDayOff"
+            class="day-off-notice"
+            :style="{ backgroundColor: dayOffColor || '#F0F0F0' }"
+            :class="{ 'has-dark-background': isDarkColor(dayOffColor) }"
+        >
             <h3>Day Off</h3>
             <p>{{ dayOffReason }}</p>
         </div>
@@ -173,14 +178,19 @@ const isDayOff = computed(() => {
     return isGlobalDayOff || (exceptionInfo && exceptionInfo.isDayOff);
 });
 
-// Get color for the day off notice border
+
+// Get color for the day off notice background
 const dayOffColor = computed(() => {
-    if (!isDayOff.value) return 'transparent'; // Default if not a day off
+    if (!isDayOff.value) return null; // No color if not a day off
     const exceptionInfo = exceptions.value.find(e => e.date === selectedDate.value);
-    if (exceptionInfo && exceptionInfo.isDayOff) return exceptionInfo.color || '#F0F0F0'; // Use exception color or default
+    // Prioritize exception color if it exists and marks the day off
+    if (exceptionInfo && exceptionInfo.isDayOff) return exceptionInfo.color || '#F0F0F0';
+    // Otherwise, check the global days off list
     const dayOffInfo = daysOff.value.find(d => d.date === selectedDate.value);
-    return dayOffInfo?.color || '#F0F0F0'; // Use day off color or default
+    // Return the color from the global list or a default
+    return dayOffInfo?.color || '#F0F0F0';
 });
+
 
 // Get the reason for the day off, if applicable
 const dayOffReason = computed(() => {
