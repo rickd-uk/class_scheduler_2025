@@ -31,8 +31,7 @@
                                   <option :value="null">-- No Class --</option>
                                   <option v-for="cls in availableClasses" :key="cls.id" :value="cls.id">
                                       <template v-if="cls.classType === 'numbered'">
-                                          Yr {{ cls.yearLevel }} - Cls {{ cls.classNumber }}
-                                      </template>
+                                        {{ formatNumberedClassNameForDropdown(cls) }}                                      </template>
                                       <template v-else-if="cls.classType === 'special'">
                                           {{ cls.className }} <span v-if="cls.yearLevel" class="special-year-level-option">(Yr {{ cls.yearLevel }})</span>
                                       </template>
@@ -193,6 +192,21 @@ const capitalize = (s) => {
     if (typeof s !== 'string' || s.length === 0) return '';
     return s.charAt(0).toUpperCase() + s.slice(1);
 }
+
+// --- Add Formatting Helper for Dropdown ---
+const formatNumberedClassNameForDropdown = (cls) => {
+    if (!cls || cls.classType !== 'numbered' || !cls.yearLevel || !cls.classNumber) {
+        return 'Invalid'; // Fallback for invalid data
+    }
+    const yearNum = parseInt(cls.yearLevel, 10);
+    // Calculate display year (1-3 for both JH and HS)
+    const displayYear = yearNum <= 3 ? yearNum : yearNum - 3;
+    // Determine suffix
+    const schoolSuffix = yearNum <= 3 ? 'J' : 'H';
+    // Return formatted string
+    return `${displayYear}${schoolSuffix}-${cls.classNumber}`;
+};
+
 
 </script>
 
