@@ -23,15 +23,16 @@
             <tbody>
                 <tr v-for="period in periods" :key="period">
                     <td>{{ period }}</td>
-                    <td v-for="day in daysOfWeek" :key="`${day}-${period}`">
-                        <div v-if="getClassForSlot(day, period)" class="schedule-item">
-                            <span v-if="getClassForSlot(day, period).classType === 'numbered'">
-                                {{ getClassForSlot(day, period).yearLevel }}-{{ getClassForSlot(day, period).classNumber }}
+                    <td v-for="day in daysOfWeek" :key="`${day}-${period}`"
+                        :style="{ backgroundColor: getClassColor(day, period) || 'transparent' }">
+                        <div v-if="getClassForPeriod(day, period)" class="schedule-item">
+                            <span v-if="getClassForPeriod(day, period).classType === 'numbered'">
+                                {{ formatNumberedClassName(getClassForPeriod(day, period)) }}
                             </span>
-                            <span v-else-if="getClassForSlot(day, period).classType === 'special'">
-                                {{ getClassForSlot(day, period).className }}
-                                <span v-if="getClassForSlot(day, period).yearLevel" class="special-year-level-display">
-                                    (Yr {{ getClassForSlot(day, period).yearLevel }})
+                            <span v-else-if="getClassForPeriod(day, period).classType === 'special'">
+                                {{ getClassForPeriod(day, period).className }}
+                                <span v-if="getClassForPeriod(day, period).yearLevel" class="special-year-level-display">
+                                    (Yr {{ getClassForPeriod(day, period).yearLevel }})
                                 </span>
                             </span>
                             <span v-else>
@@ -90,24 +91,37 @@ const capitalize = (s) => {
 }
 
 // Helper function to find the full class details for a given day and period
-const getClassForSlot = (day, period) => {
-   const periodIndex = period - 1;
-    // Ensure day exists in scheduleData before trying to access its index
+const getClassForPeriod = (day, period) => { // Renamed from getClassForSlot if preferred
+    const periodIndex = period - 1;
     const scheduleItem = scheduleData.value?.[day]?.[periodIndex];
-    // If there's no item or it's null or has no classId, return null
     if (!scheduleItem || !scheduleItem.classId) {
         return null; // No class assigned in schedule
     }
-
-    // Find the corresponding class details from the classes array
-    // Ensure we compare IDs correctly (e.g., handle string vs number if necessary)
     const classIdToFind = scheduleItem.classId;
     const foundClass = classes.value.find(cls => String(cls.id) === String(classIdToFind));
-
-    // *** CHANGE HERE: Return null if class not found (deleted) ***
-    // Return the found class object OR null if the classId from schedule doesn't exist anymore
-    return foundClass || null; 
+    return foundClass || null; // Return null if class definition not found (deleted)
 };
+
+// --- Add helper to get color ---
+// Helper function to get the color for a specific schedule slot
+const getClassColor = (day, period) => {
+    const cls = getClassForPeriod(day, period); // Get the class object for the slot
+    // Return the class color or null (which defaults to transparent in the style binding)
+    // Use white as a fallback if color is missing but class exists
+    return cls ? (cls.color || '#FFFFFF') : null;
+};
+
+// Helper to format numbered class names like "1J-3" or "3H-8"
+const formatNumberedClassName = (cls) => {
+    if (!cls || cls.classType !== 'numbered' || !cls.yearLevel || !cls.classNumber) {
+        return '?'; // Fallback for invalid data
+    }
+    const yearNum = parseInt(cls.yearLevel, 10);
+    const displayYear = yearNum <= 3 ? yearNum : yearNum - 3;
+    const schoolSuffix = yearNum <= 3 ? 'J' : 'H';
+    return `${displayYear}${schoolSuffix}-${cls.classNumber}`;
+};
+
 
 // --- Lifecycle Hook ---
 onMounted(() => {
@@ -148,6 +162,7 @@ onMounted(() => {
   vertical-align: middle; /* Center content vertically */
   height: 50px; /* Ensure consistent row height */
   min-width: 90px; /* Minimum width for columns */
+  transition: background-color 0.3s ease; /* Smooth background transition */
 }
 
 .schedule-table th {
@@ -157,8 +172,10 @@ onMounted(() => {
 /* Style for the first column (Period numbers) */
 .schedule-table td:first-child {
     font-weight: 600;
-    background-color: var(--light);
+    background-color: var(--light) !important; /* Ensure period column stays light grey */
     color: var(--secondary);
+    min-width: 60px; /* Smaller min-width for period column */
+    width: 60px; /* Fixed width for period column */
 }
 
 .schedule-item {
@@ -166,13 +183,17 @@ onMounted(() => {
     white-space: nowrap; /* Prevent wrapping */
     overflow: hidden;
     text-overflow: ellipsis;
+    /* Ensure text is readable on colored backgrounds */
+    /* Mix-blend-mode can sometimes help, but calculating contrast is better */
+    /* mix-blend-mode: difference; */
+    /* color: white; */ /* Example - might need dynamic color based on background */
 }
 .schedule-item span { /* Ensure spans display correctly */
     display: inline-block;
 }
 .special-year-level-display { /* Style for optional year level on special classes */
     font-size: 0.8em;
-    color: var(--secondary);
+    color: var(--secondary); /* Adjust color if needed for contrast */
     margin-left: 0.3em;
     font-style: italic;
 }
@@ -198,4 +219,11 @@ onMounted(() => {
     border: 1px solid #f5c6cb;
     border-radius: var(--border-radius);
 }
+/* Add styling for cell content contrast if background is dark */
+.schedule-table td {
+    color: #333; /* Default text color */
+}
+/* Consider adding a class for cells with dark backgrounds to set light text */
+/* Or use JavaScript to calculate luminance and set text color dynamically */
 </style>
+

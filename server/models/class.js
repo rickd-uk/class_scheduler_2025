@@ -42,6 +42,14 @@ module.exports = (sequelize, DataTypes) => {
     className: {
         type: DataTypes.STRING, // e.g., 'Global', 'Assembly'
         allowNull: true // Only used for special types
+    },
+    color: {
+        type: DataTypes.STRING(7), // #RRGGBB hex format
+        allowNull: true,          // Allow it to be optional
+        defaultValue: '#FFFFFF',  // Default to white (matches migration)
+        validate: {               // Optional: Basic format validation
+            is: /^#[0-9A-F]{6}$/i
+        }
     }
     // --- End new fields ---
   }, {

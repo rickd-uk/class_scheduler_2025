@@ -61,6 +61,11 @@
                </div>
            </div>
 
+           <div class="form-group">
+               <label for="new-class-color">Color</label>
+               <input type="color" id="new-class-color" v-model="newClass.color" class="form-control form-control-sm form-control-color">
+           </div>
+
           <button type="submit" class="btn btn-success btn-sm" :disabled="isAdding">
              {{ isAdding ? 'Adding...' : 'Save Class' }}
           </button>
@@ -71,9 +76,10 @@
       <ul v-else-if="classes.length > 0" class="item-list">
          <li v-for="cls in classes" :key="cls.id" class="item class-item">
             <div class="class-main-info">
+                <span class="color-square" :style="{ backgroundColor: cls.color || '#FFFFFF' }"></span>
                 <div class="item-details">
                     <span v-if="cls.classType === 'numbered'" class="item-name">
-                      {{ formatNumberedClassName(cls) }}
+                        {{ formatNumberedClassName(cls) }}
                     </span>
                     <span v-else-if="cls.classType === 'special'" class="item-name special-class-name">
                         {{ cls.className }}
@@ -100,20 +106,20 @@
                 </div>
             </div>
             <div v-if="cls.textbooks && cls.textbooks.length > 0" class="linked-textbooks">
-                <strong>Textbooks:</strong>
-                <ul>
-                    <li v-for="book in cls.textbooks" :key="book.id">
-                        <span>{{ book.title }}</span>
-                        <button
-                           class="btn-unlink"
-                           title="Unlink Textbook"
-                           @click="handleUnlinkTextbook(cls.id, book.id)"
-                           :disabled="unlinkingTextbookInfo?.classId === cls.id && unlinkingTextbookInfo?.textbookId === book.id"
-                        >
-                           &times;
-                        </button>
-                    </li>
-                </ul>
+                 <strong>Textbooks:</strong>
+                 <ul>
+                     <li v-for="book in cls.textbooks" :key="book.id">
+                         <span>{{ book.title }}</span>
+                         <button
+                            class="btn-unlink"
+                            title="Unlink Textbook"
+                            @click="handleUnlinkTextbook(cls.id, book.id)"
+                            :disabled="unlinkingTextbookInfo?.classId === cls.id && unlinkingTextbookInfo?.textbookId === book.id"
+                         >
+                            &times;
+                         </button>
+                     </li>
+                 </ul>
             </div>
             <div v-else class="linked-textbooks-empty">
                 No textbooks linked.
@@ -143,7 +149,8 @@ const newClass = reactive({
   classType: 'numbered',
   classNumber: '',
   yearLevel: '',
-  className: ''
+  className: '',
+  color: '#FFFFFF' // Default color for add form
 });
 
 // --- Store State ---
@@ -161,14 +168,15 @@ const resetForm = () => {
     resetConditionalFields();
     newClass.classType = 'numbered';
     newClass.yearLevel = '';
+    newClass.color = '#FFFFFF'; // Reset color
     isAdding.value = false;
 };
 const handleAddClass = async () => {
-    isAdding.value = true;
-    addError.value = null;
+    isAdding.value = true; addError.value = null;
     let dataToSend = {
         classType: newClass.classType,
-        yearLevel: newClass.yearLevel || null
+        yearLevel: newClass.yearLevel || null,
+        color: newClass.color // Include color in payload
     };
     if (newClass.classType === 'numbered') {
         if (!newClass.classNumber || !newClass.yearLevel) {
@@ -247,7 +255,7 @@ const openLinkModal = (cls) => {
 };
 const setClassName = (name) => { newClass.className = name; };
 
-// --- Add Formatting Helper ---
+// Formatting helper for numbered classes
 const formatNumberedClassName = (cls) => {
     if (!cls || cls.classType !== 'numbered' || !cls.yearLevel || !cls.classNumber) {
         return 'Invalid Class'; // Fallback
@@ -257,8 +265,6 @@ const formatNumberedClassName = (cls) => {
     const schoolSuffix = yearNum <= 3 ? 'J' : 'H'; // J for Junior High, H for High School
     return `${displayYear}${schoolSuffix}-${cls.classNumber}`;
 };
-
-
 
 // --- Lifecycle Hook ---
 onMounted(() => {
@@ -302,4 +308,9 @@ select.form-control-sm { height: calc(1.5em + 0.6rem + 2px); line-height: 1.5; }
 .btn-unlink { background: none; border: none; color: var(--danger); cursor: pointer; font-size: 1.1rem; line-height: 1; padding: 0 0.3rem; margin-left: 0.5rem; }
 .btn-unlink:hover { color: var(--dark); }
 .btn-unlink:disabled { color: #ccc; cursor: not-allowed; }
+/* Added styles */
+.color-square { display: inline-block; width: 1em; height: 1em; border: 1px solid #ccc; margin-right: 0.5em; vertical-align: middle; flex-shrink: 0; }
+.form-control-color { width: 100px; height: 30px; padding: 0.1rem 0.2rem; cursor: pointer; }
+.class-main-info { align-items: center; }
 </style>
+

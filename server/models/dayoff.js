@@ -34,6 +34,14 @@
               model: 'Users', // Target table name
               key: 'id'       // Target column name
           }
+        },
+        color: {
+            type: DataTypes.STRING(7), // #RRGGBB hex format
+            allowNull: true,          // Allow it to be optional
+            defaultValue: '#F0F0F0',  // Default to light grey (matches migration)
+            validate: {               // Optional: Basic format validation
+                is: /^#[0-9A-F]{6}$/i
+            }
         }
       }, {
         sequelize,
