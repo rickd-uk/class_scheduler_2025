@@ -22,10 +22,10 @@
             </thead>
             <tbody>
                 <tr v-for="period in periods" :key="period">
-                    <td>Period {{ period }}</td>
+                    <td>{{ period }}</td>
                     <td v-for="day in daysOfWeek" :key="`${day}-${period}`">
                         <div v-if="getClassForSlot(day, period)" class="schedule-item">
-                            Yr {{ getClassForSlot(day, period).yearLevel }} - Cls {{ getClassForSlot(day, period).classNumber }}
+                            {{ getClassForSlot(day, period).yearLevel }}-{{ getClassForSlot(day, period).classNumber }}
                         </div>
                         <div v-else class="no-class">--</div>
                     </td>
