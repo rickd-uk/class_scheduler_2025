@@ -25,7 +25,17 @@
                     <td>{{ period }}</td>
                     <td v-for="day in daysOfWeek" :key="`${day}-${period}`">
                         <div v-if="getClassForSlot(day, period)" class="schedule-item">
-                            {{ getClassForSlot(day, period).yearLevel }}-{{ getClassForSlot(day, period).classNumber }}
+                            <span v-if="getClassForSlot(day, period).classType === 'numbered'">
+                                {{ getClassForSlot(day, period).yearLevel }}-{{ getClassForSlot(day, period).classNumber }}
+                            </span>
+                            <span v-else-if="getClassForSlot(day, period).classType === 'special'">
+                                {{ getClassForSlot(day, period).className }}
+                                <span v-if="getClassForSlot(day, period).yearLevel" class="special-year-level-display">
+                                    (Yr {{ getClassForSlot(day, period).yearLevel }})
+                                </span>
+                            </span>
+                            <span v-else>
+                                ? </span>
                         </div>
                         <div v-else class="no-class">--</div>
                     </td>
@@ -48,11 +58,8 @@ const daysOfWeek = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
 const periods = [1, 2, 3, 4, 5, 6];
 
 // --- Computed Properties from Store ---
-// Get the raw schedule data (object with days as keys, arrays of {classId: id} or null as values)
 const scheduleData = computed(() => store.getters['schedule/regularSchedule']);
-// Get the list of all defined classes {id, classNumber, yearLevel, ...}
 const classes = computed(() => store.getters['classes/allClasses']);
-// Loading and error states
 const isLoadingSchedule = computed(() => store.getters['schedule/isLoading']);
 const isLoadingClasses = computed(() => store.getters['classes/isLoading']);
 const scheduleError = computed(() => store.getters['schedule/error']);
@@ -60,7 +67,6 @@ const classesError = computed(() => store.getters['classes/error']);
 
 // Check if there is any actual schedule data to display
 const hasScheduleData = computed(() => {
-    // Check if scheduleData is populated and if any day has at least one non-null entry
     return scheduleData.value &&
            Object.keys(scheduleData.value).length > 0 &&
            daysOfWeek.some(day => scheduleData.value[day]?.some(slot => slot !== null));
@@ -71,10 +77,8 @@ const hasScheduleData = computed(() => {
 // Function to open the editing modal
 const openWeeklyEditor = () => {
     console.log("Opening Weekly Schedule Editor Modal");
-    // Pass the current schedule data (fetched from store) to the modal
     store.dispatch('ui/openModal', {
         modalName: 'weeklySchedule',
-        // Pass a deep copy to prevent accidental modification before saving
         data: JSON.parse(JSON.stringify(scheduleData.value))
     });
 };
@@ -87,30 +91,21 @@ const capitalize = (s) => {
 
 // Helper function to find the full class details for a given day and period
 const getClassForSlot = (day, period) => {
-    // Adjust period to be 0-indexed for the array
     const periodIndex = period - 1;
-    // Get the schedule item for the specific day and period index
-    // Ensure day exists in scheduleData before trying to access its index
     const scheduleItem = scheduleData.value?.[day]?.[periodIndex];
-
-    // If there's no item or it's null, return null
     if (!scheduleItem || !scheduleItem.classId) {
         return null;
     }
-
-    // Find the corresponding class details from the classes array
-    // Ensure we compare IDs correctly (e.g., handle string vs number if necessary)
     const classIdToFind = scheduleItem.classId;
-    const foundClass = classes.value.find(cls => String(cls.id) === String(classIdToFind)); // Safer comparison
-
-    // Return the found class object, or a placeholder if not found
-    return foundClass || { yearLevel: '?', classNumber: '?' }; // Placeholder for missing class
+    // Find the full class object from the store
+    const foundClass = classes.value.find(cls => String(cls.id) === String(classIdToFind));
+    // Return the found class object or null
+    return foundClass || null; // Return null if class definition not found
 };
 
 // --- Lifecycle Hook ---
 onMounted(() => {
   // Ensure schedule data is fetched if not already present
-  // Check if scheduleData is empty or not yet loaded
   if ((!scheduleData.value || Object.keys(scheduleData.value).length === 0) && !isLoadingSchedule.value) {
     console.log("[WeeklySchedulePanel] Fetching regular schedule on mount.");
     store.dispatch('schedule/fetchRegularSchedule');
@@ -153,13 +148,27 @@ onMounted(() => {
   background-color: var(--light);
   font-weight: 600;
 }
+/* Style for the first column (Period numbers) */
+.schedule-table td:first-child {
+    font-weight: 600;
+    background-color: var(--light);
+    color: var(--secondary);
+}
 
 .schedule-item {
     font-weight: 500;
-    /* Add background or other styling if desired */
     white-space: nowrap; /* Prevent wrapping */
     overflow: hidden;
     text-overflow: ellipsis;
+}
+.schedule-item span { /* Ensure spans display correctly */
+    display: inline-block;
+}
+.special-year-level-display { /* Style for optional year level on special classes */
+    font-size: 0.8em;
+    color: var(--secondary);
+    margin-left: 0.3em;
+    font-style: italic;
 }
 
 .no-class {
@@ -184,4 +193,3 @@ onMounted(() => {
     border-radius: var(--border-radius);
 }
 </style>
-
