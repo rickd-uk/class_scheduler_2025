@@ -5,6 +5,7 @@ services:
   server:
     build: ./server # Path to server Dockerfile directory
     container_name: scheduler-server
+    command: ["sh", "-c", "sleep 10 && yarn dev"]
     restart: unless-stopped
     ports:
       - "3000:3000" # Map host port 3000 to container port 3000 (or use ${PORT})
