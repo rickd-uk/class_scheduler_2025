@@ -18,13 +18,13 @@ module.exports = {
         allowNull: false // Original migration likely missed this, but let's keep it consistent with later changes
       },
       // This 'subject' column will be removed later by another migration
-      subject: {
-        type: Sequelize.STRING
-      },
+      //subject: {
+      //  type: Sequelize.STRING
+      //},
       // This 'gradeLevel' column will be renamed later by another migration
-      gradeLevel: {
-        type: Sequelize.STRING
-      },
+      //gradeLevel: {
+      //  type: Sequelize.STRING
+      //},
       // The userId column definition here was incomplete in your pasted version,
       // ensure it matches the definition from the model/later migrations
       userId: {
