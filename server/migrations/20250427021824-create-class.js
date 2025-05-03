@@ -4,7 +4,7 @@ module.exports = {
   async up(queryInterface, Sequelize) {
     // Use lowercase table name 'classes'
     const tableName = 'classes';
-    console.log(`Creating table: ${tableName}...`);
+    console.log(`Creating table: ${tableName} with original columns...`);
     await queryInterface.createTable(tableName, { // Use lowercase table name
       id: {
         allowNull: false,
@@ -12,25 +12,24 @@ module.exports = {
         primaryKey: true,
         type: Sequelize.INTEGER
       },
-      // This 'name' column will be renamed later by another migration
-      name: {
+      // --- Use original column names ---
+      name: { // This will be renamed to classNumber later
         type: Sequelize.STRING,
-        allowNull: false // Original migration likely missed this, but let's keep it consistent with later changes
+        allowNull: false // Make name required
       },
-      // This 'subject' column will be removed later by another migration
-      //subject: {
-      //  type: Sequelize.STRING
-      //},
-      // This 'gradeLevel' column will be renamed later by another migration
-      //gradeLevel: {
-      //  type: Sequelize.STRING
-      //},
-      // The userId column definition here was incomplete in your pasted version,
-      // ensure it matches the definition from the model/later migrations
+      subject: { // This will be removed later
+        type: Sequelize.STRING,
+        allowNull: true // Assuming subject was optional
+      },
+      gradeLevel: { // This will be renamed to yearLevel later
+        type: Sequelize.STRING,
+        allowNull: false // Assuming gradeLevel was required
+      },
+      // --- End original column names ---
       userId: {
         type: Sequelize.INTEGER,
-        allowNull: false, // Should be not null
-        references: { model: 'Users', key: 'id' }, // Add reference
+        allowNull: false, // Ensure userId is required
+        references: { model: 'Users', key: 'id' }, // Add reference to Users table
         onUpdate: 'CASCADE',
         onDelete: 'CASCADE'
       },
@@ -46,13 +45,15 @@ module.exports = {
       }
     });
     console.log(`Finished creating table: ${tableName}.`);
-    // Optional: Add indexes if needed (e.g., on userId)
-    // await queryInterface.addIndex(tableName, ['userId']);
+    // Optional: Add index on userId for performance
+    await queryInterface.addIndex(tableName, ['userId']);
   },
   async down(queryInterface, Sequelize) {
     // Use lowercase table name 'classes'
     const tableName = 'classes';
     console.log(`Dropping table: ${tableName}...`);
+    // Remove index first if added
+    await queryInterface.removeIndex(tableName, ['userId']);
     await queryInterface.dropTable(tableName); // Use lowercase table name
     console.log(`Finished dropping table: ${tableName}.`);
   }

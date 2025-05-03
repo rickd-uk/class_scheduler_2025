@@ -9,6 +9,8 @@ const classRoutes = require('./routes/classRoutes');
 const textbookRoutes = require('./routes/textbookRoutes');
 const scheduleRoutes = require('./routes/scheduleRoutes');
 const daysOffRoutes = require('./routes/daysOffRoutes'); // <-- Import Days Off routes
+const exceptionPatternsRoutes = require('./routes/exceptionPatternsRoutes'); // <-- Import
+const appliedExceptionsRoutes = require('./routes/appliedExceptionsRoutes'); // <-- Import
 // --- Middleware Imports ---
 const authenticateToken = require('./middleware/authenticateToken');
 
@@ -56,6 +58,8 @@ app.use('/api/textbooks', textbookRoutes); // Add authenticateToken if textbooks
 app.use('/api/schedule', authenticateToken, scheduleRoutes); // Schedule routes are protected
 // Mount days off routes under /api/days-off and apply authentication middleware
 app.use('/api/days-off', authenticateToken, daysOffRoutes); // <-- Mount Days Off routes (protected)
+app.use('/api/exception-patterns', authenticateToken, exceptionPatternsRoutes); // <-- Mount
+app.use('/api/applied-exceptions', authenticateToken, appliedExceptionsRoutes); // <-- Mount
 
 // --- Error Handling Middleware (Should be last) ---
 app.use((err, req, res, next) => {
