@@ -10,6 +10,7 @@ export default {
       linkTextbookModal: false, // Add state for the link modal
       dayOffEditor: false,
       exceptionPatternEditor: false,
+      classFormModal: false,
       // classEditor: false,
     },
     modalData: {
@@ -21,6 +22,7 @@ export default {
       dayOffEditor: null,
       exceptionPatternEditor: null,
       // classEditor: null,
+      classFormModal: null,
     },
     isLoading: false,
     notification: null

@@ -183,5 +183,5 @@ router.delete('/:classId/textbooks/:textbookId', async (req, res) => {
 
 // --- TODO: Add PUT /:id route for editing classes (including color) ---
 
-module.exports = router;
 
+module.exports = router;

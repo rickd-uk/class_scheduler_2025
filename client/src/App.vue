@@ -15,9 +15,9 @@
         <div class="two-column-layout">
           <div class="left-column">
             <div class="panel-group">
+              <SchoolYearPanel />
               <TextbooksPanel />
               <ClassesPanel />
-              <SchoolYearPanel />
               <DaysOffPanel />
               <ExceptionPatternsPanel />
             </div>
@@ -81,6 +81,10 @@
         v-if="store.state.ui.modals.exceptionPatternEditor"
         :key="'exceptionPatternEditor-' + store.state.ui.modals.exceptionPatternEditor"
     />
+    <ClassFormModal
+        v-if="store.state.ui.modals.classFormModal"
+        :key="'classFormModal-' + store.state.ui.modals.classFormModal"
+    />
     </div>
 </template>
 
@@ -107,8 +111,8 @@ import WeeklyScheduleModal from './components/modals/WeeklyScheduleModal.vue'
 import TextbookFormModal from './components/modals/TextbookFormModal.vue'
 import LinkTextbookModal from './components/modals/LinkTextbookModal.vue'
 import DayOffEditorModal from './components/modals/DayOffEditorModal.vue'
-import ExceptionPatternEditorModal from './components/modals/ExceptionPatternEditorModal.vue'; // <-- Import Modal
-
+import ExceptionPatternEditorModal from './components/modals/ExceptionPatternEditorModal.vue' // <-- Import Modal
+import ClassFormModal from './components/modals/ClassFormModal.vue'
 
 // Auth Imports
 import LoginForm from './components/auth/LoginForm.vue'
@@ -140,6 +144,8 @@ watch(() => store.state.ui.modals.dayOffEditor, (newValue, oldValue) => {
 });
 // *** Add watcher for exceptionPatternEditor ***
 watch(() => store.state.ui.modals.exceptionPatternEditor, (newValue, oldValue) => { console.log(`[App.vue Watcher] exceptionPatternEditor modal state changed from ${oldValue} to ${newValue}`); });
+
+watch(() => store.state.ui.modals.classFormModal, (newValue, oldValue) => { console.log(`[App.vue Watcher] classFormModal modal state changed from ${oldValue} to ${newValue}`); });
 
 
 // --- Component State ---

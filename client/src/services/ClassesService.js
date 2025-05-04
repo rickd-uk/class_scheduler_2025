@@ -27,6 +27,14 @@ const ClassesService = {
     return ApiService.post(CLASSES_ENDPOINT, classData);
   },
 
+  update(id, classData) {
+     const url = `${CLASSES_ENDPOINT}/${id}`;
+     console.log(`ClassesService: Updating class ID ${id} via PUT ${url}`);
+     // Uses the generic ApiService PUT method
+     return ApiService.put(url, classData);
+  },
+
+
   /**
    * Deletes a specific class for the authenticated user.
    * @param {number|string} id - The ID of the class to delete.
