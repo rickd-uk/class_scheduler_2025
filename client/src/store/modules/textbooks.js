@@ -105,6 +105,8 @@ export default {
             console.log(`Deleted textbook ID ${textbookId} via API`);
             // Optionally dispatch success notification
             // dispatch('ui/showNotification', { type: 'success', message: 'Textbook deleted successfully!' }, { root: true });
+            console.log(`[deleteTextbook Action] Triggering fetchClasses to update links.`);
+            await dispatch('classes/fetchClasses', null, { root: true }); // Use root: true for cross-module dispatch
         } catch (error) {
             const message = error.response?.data?.message || error.message || 'Failed to delete textbook';
             console.error(`Error deleting textbook ID ${textbookId}:`, message);

@@ -3,7 +3,6 @@
     <div class="modal-content">
       <button @click="closeModal" class="modal-close-btn">&times;</button>
       <h3>{{ isEditing ? 'Edit Textbook' : 'Add New Textbook' }}</h3>
-      <hr>
 
       <form @submit.prevent="handleSubmit" class="modal-form">
         <p v-if="formError" class="error-message">{{ formError }}</p>
