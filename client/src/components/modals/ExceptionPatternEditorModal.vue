@@ -40,7 +40,7 @@
 
         <div class="modal-footer">
           <button @click="closeModal" type="button" class="btn btn-secondary btn-sm" :disabled="isLoading">
-            Cancel
+            Close
           </button>
           <button type="submit" class="btn btn-primary btn-sm" :disabled="isLoading">
             {{ isLoading ? (isEditing ? 'Updating...' : 'Creating...') : (isEditing ? 'Save Changes' : 'Create Pattern') }}
@@ -52,7 +52,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, watch, onMounted, onUnmounted } from 'vue';
+import { ref, reactive, computed, watch, onMounted, onUnmounted, nextTick } from 'vue';
 import { useStore } from 'vuex';
 
 const store = useStore();
@@ -73,6 +73,13 @@ const editablePattern = reactive({
 const modalData = computed(() => store.getters['ui/getModalData'](modalName));
 const isEditing = computed(() => !!editablePattern.id);
 
+const resetForm = () => {
+  editablePattern.id = null;
+  editablePattern.name = '';
+  editablePattern.patternData = Array(6).fill(null);
+  formError.value = null;
+  console.log("Exception pattern form reset");
+}
 // --- Watchers ---
 // Populate form when modal opens
 watch(modalData, (newData) => {
@@ -88,9 +95,7 @@ watch(modalData, (newData) => {
     console.log("ExceptionPatternEditorModal received EDIT data:", newData);
   } else {
     // Add Mode
-    editablePattern.id = null;
-    editablePattern.name = '';
-    editablePattern.patternData = Array(6).fill(null); // Reset to empty pattern
+    resetForm();
     console.log("ExceptionPatternEditorModal opened in ADD mode.");
   }
 }, { immediate: true, deep: true }); // Deep watch needed for array changes
@@ -101,6 +106,8 @@ const closeModal = () => {
   if (isLoading.value) return;
   store.dispatch('ui/closeModal', modalName);
 };
+
+
 
 const handleSubmit = async () => {
   // Validate name
@@ -127,11 +134,14 @@ const handleSubmit = async () => {
     if (isEditing.value) {
       // Update Existing Pattern
       await store.dispatch('exceptionPatterns/updatePattern', { id: editablePattern.id, data: payload });
+      nextTick(() => {
+        closeModal();  // Close modal after the next DOM update cycle
+      })
     } else {
       // Add New Pattern
       await store.dispatch('exceptionPatterns/addPattern', payload);
+      resetForm();   // reset form for next entry
     }
-    closeModal();
   } catch (error) {
     formError.value = error.message || `Failed to ${isEditing.value ? 'update' : 'create'} pattern.`;
     console.error(`Error ${isEditing.value ? 'updating' : 'creating'} pattern:`, error);
@@ -139,6 +149,7 @@ const handleSubmit = async () => {
     isLoading.value = false;
   }
 };
+
 
 // --- Lifecycle Hooks ---
 const handleEscapeKey = (event) => { if (event.key === 'Escape') { closeModal(); } };
