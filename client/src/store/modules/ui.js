@@ -6,7 +6,7 @@ export default {
       templateEditor: false,
       dailyException: false,
       weeklySchedule: false,
-      textbookEditor: false,
+      textbookFormModal: false,
       linkTextbookModal: false, // Add state for the link modal
       dayOffEditor: false,
       exceptionPatternEditor: false,
@@ -16,7 +16,7 @@ export default {
       templateEditor: null,
       dailyException: null,
       weeklySchedule: null,
-      textbookEditor: null,
+      textbookFormModal: null,
       linkTextbookModal: null, // Add state for link modal data (the class object)
       dayOffEditor: null,
       exceptionPatternEditor: null,

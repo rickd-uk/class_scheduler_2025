@@ -2,27 +2,11 @@
   <div class="panel textbooks-panel">
      <div class="panel-header">
       <h3 class="panel-title">Manage Textbooks</h3>
-      <button class="btn btn-sm btn-primary" @click="showAddForm = !showAddForm">
-          {{ showAddForm ? 'Cancel' : 'Add Textbook' }}
+      <button class="btn btn-sm btn-primary" @click="openAddModal">
+          Add Textbook
       </button>
     </div>
     <div class="panel-body">
-        <form v-if="showAddForm" @submit.prevent="handleAddTextbook" class="add-form">
-            <h4>Add New Textbook</h4>
-            <p v-if="addError" class="error-message">{{ addError }}</p>
-            <div class="form-group">
-                <label for="new-textbook-title">Title</label>
-                <input type="text" id="new-textbook-title" v-model="newTextbook.title" required class="form-control form-control-sm">
-            </div>
-            <div class="form-group">
-                <label for="new-textbook-desc">Description</label>
-                <textarea id="new-textbook-desc" v-model="newTextbook.description" class="form-control form-control-sm" rows="3"></textarea>
-            </div>
-            <button type="submit" class="btn btn-success btn-sm" :disabled="isAdding">
-                {{ isAdding ? 'Adding...' : 'Save Textbook' }}
-            </button>
-        </form>
-
         <div v-if="isLoading" class="loading">Loading textbooks...</div>
        <div v-else-if="fetchError" class="error-message">{{ fetchError }}</div>
       <ul v-else-if="textbooks.length > 0" class="item-list">
@@ -32,7 +16,7 @@
                 <span v-if="book.description" class="item-meta">{{ truncate(book.description, 100) }}</span>
             </div>
             <div class="item-actions">
-               <button class="btn btn-sm btn-secondary" @click="handleEditClick(book)">Edit</button>
+               <button class="btn btn-sm btn-secondary" @click="openEditModal(book)">Edit</button>
                <button
                   class="btn btn-sm btn-danger"
                   @click="handleDeleteTextbook(book.id)"
@@ -43,112 +27,71 @@
                </div>
          </li>
       </ul>
-        <p v-else class="placeholder-content">No textbooks defined yet.</p>
+       <p v-else class="placeholder-content">No textbooks defined yet. Click 'Add Textbook' to start.</p>
     </div>
     </div>
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue'; // Removed reactive as newTextbook is gone
 import { useStore } from 'vuex';
 
 const store = useStore();
 
 // --- Component State ---
-const showAddForm = ref(false); // Controls visibility of the add form
-const isAdding = ref(false); // Tracks if an add operation is in progress
-const addError = ref(null); // Stores error messages related to adding a textbook
+// Removed state related to inline add form: showAddForm, isAdding, addError, newTextbook
 const deletingTextbookId = ref(null); // Track deleting state for specific button
 const deleteError = ref(null); // Track delete errors
-const newTextbook = reactive({ // Reactive object for the add form data
-    title: '',
-    description: ''
-});
-// Note: editingTextbook and showEditForm refs removed as modal handles its own state
 
 // --- Store State ---
 // Computed properties to get data from the Vuex store reactively
 const textbooks = computed(() => store.getters['textbooks/allTextbooks']); // Get the list of textbooks
-const isLoading = computed(() => store.getters['textbooks/isLoading']); // Get loading state for fetching textbooks
-const fetchError = computed(() => store.getters['textbooks/error']); // Get error state from fetching textbooks
+const isLoading = computed(() => store.getters['textbooks/isLoading']); // Get loading state
+const fetchError = computed(() => store.getters['textbooks/error']); // Get error state
 
 // --- Methods ---
 
-// Resets the 'Add Textbook' form fields and error states
-const resetForm = () => {
-    newTextbook.title = '';
-    newTextbook.description = '';
-    addError.value = null;
-    isAdding.value = false;
-};
+// Removed resetForm and handleAddTextbook methods as they are handled by the modal
 
-// Handles the submission of the 'Add Textbook' form
-const handleAddTextbook = async () => {
-    // Basic validation
-    if (!newTextbook.title) {
-        addError.value = "Textbook title is required.";
-        return;
-    }
-    // Set loading state and clear previous errors
-    isAdding.value = true;
-    addError.value = null;
-
-    try {
-        // Dispatch action to add the textbook via API
-        await store.dispatch('textbooks/addTextbook', { ...newTextbook });
-        // Reset form and hide it on success
-        resetForm();
-        showAddForm.value = false;
-    } catch (error) {
-        // Set error message if adding fails
-        addError.value = error.message || "Failed to add textbook.";
-    } finally {
-        // Always reset loading state
-        isAdding.value = false;
-    }
-};
-
-// Method to open the edit modal
-const handleEditClick = (book) => {
-    console.log("Opening edit modal for textbook:", book);
-    // Dispatch action to open the modal and pass the textbook data
+// Method to open the modal for adding a new textbook
+const openAddModal = () => {
+    console.log("Opening textbook modal in ADD mode");
     store.dispatch('ui/openModal', {
-        modalName: 'textbookEditor', // Use the modal name defined in ui.js
-        data: book // Pass the textbook object (action will deep copy)
+        modalName: 'textbookFormModal', // Use the reusable modal name
+        data: null // Pass null data to indicate 'Add' mode
+    });
+};
+
+// Method to open the modal for editing an existing textbook (renamed from handleEditClick)
+const openEditModal = (book) => {
+    console.log("Opening textbook modal in EDIT mode for:", book);
+    store.dispatch('ui/openModal', {
+        modalName: 'textbookFormModal', // Use the reusable modal name
+        data: book // Pass the existing textbook data (action will deep copy)
     });
 };
 
 // Handles clicking the delete button for a textbook
 const handleDeleteTextbook = async (id) => {
-    console.log(`[TextbooksPanel] handleDeleteTextbook called for ID: ${id}`); // <-- Log 1
-    // --- Temporarily comment out the confirmation ---
-    // if (!confirm('Are you sure you want to delete this textbook?')) {
-    //     console.log(`[TextbooksPanel] Deletion cancelled by user for ID: ${id}`); // <-- Log 2 (if cancelled)
-    //     return; // Stop if user cancels
-    // }
-    // console.log(`[TextbooksPanel] Deletion confirmed (or bypassed) for ID: ${id}. Proceeding...`); // <-- Log 3 (if confirmed/bypassed)
-    // --- End temporary comment ---
-
-    // Set loading state for the specific delete button being clicked
-    deletingTextbookId.value = id;
-    deleteError.value = null; // Clear previous delete errors
-
-    try {
-        console.log(`[TextbooksPanel] Dispatching textbooks/deleteTextbook for ID: ${id}`); // <-- Log 4
-        // Dispatch action to delete the textbook via API
-        await store.dispatch('textbooks/deleteTextbook', id);
-        console.log(`[TextbooksPanel] Dispatch successful for ID: ${id}`); // <-- Log 5
-        // Textbook is removed from the list reactively by the store mutation
-    } catch (error) {
-        console.error(`[TextbooksPanel] Error during delete dispatch for ID: ${id}`, error); // <-- Log 6 (if error)
-        // Set error message and show an alert if deleting fails
-        deleteError.value = error.message || "Failed to delete textbook.";
-        alert(`Error: ${deleteError.value}`); // Using simple alert for now
-    } finally {
-        console.log(`[TextbooksPanel] Resetting delete state for ID: ${id}`); // <-- Log 7
-        // Reset the loading state for the delete button
-        deletingTextbookId.value = null;
-    }
+   // Confirmation dialog (consider replacing with custom later)
+   //if (!confirm('Are you sure you want to delete this textbook?')) {
+   //   return; // Stop if user cancels
+   //}
+   // Set loading state for the specific delete button being clicked
+   deletingTextbookId.value = id;
+   deleteError.value = null; // Clear previous delete errors
+   try {
+     // Dispatch action to delete the textbook via API and update store
+     await store.dispatch('textbooks/deleteTextbook', id);
+     // Textbook is removed reactively by the store mutation
+   } catch (error) {
+     // Set error message and show an alert
+     deleteError.value = error.message || "Failed to delete textbook.";
+     alert(`Error: ${deleteError.value}`); // Simple alert for now
+   } finally {
+     // Reset loading state for the button
+     deletingTextbookId.value = null;
+   }
 };
 
 // Helper function to truncate long descriptions for display
@@ -159,7 +102,7 @@ const truncate = (text, length) => {
 }
 
 // --- Lifecycle Hook ---
-// Fetch textbooks when the component is first mounted, if they aren't already loaded
+// Fetch textbooks when the component is first mounted if they aren't already loaded
 onMounted(() => {
   if (textbooks.value.length === 0 && !isLoading.value) {
     store.dispatch('textbooks/fetchTextbooks');
@@ -169,106 +112,22 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* Styles for the panel */
-.panel-body {
-  max-height: 400px; /* Limit panel height and enable scrolling */
-  overflow-y: auto;
-  padding-top: 0; /* Remove top padding if header is present */
-}
-/* Styles for the add textbook form */
-.add-form {
-    padding: 1rem;
-    margin-bottom: 1rem;
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius);
-    background-color: var(--light); /* Light background for the form */
-}
-.add-form h4 {
-    margin-top: 0;
-    margin-bottom: 1rem;
-    font-size: 1rem;
-    font-weight: 600;
-}
-/* Smaller form control styles */
-.form-control-sm {
-    font-size: 0.875rem;
-    padding: 0.3rem 0.6rem;
-}
-textarea.form-control-sm {
-    line-height: 1.5; /* Ensure textarea line height is reasonable */
-}
-.add-form .form-group {
-    margin-bottom: 0.75rem; /* Space between form groups */
-}
-
-/* Styles for the list of textbooks */
-.item-list {
-  list-style: none; /* Remove default bullet points */
-  padding: 0;
-  margin: 0;
-}
-.item {
-  display: flex; /* Arrange details and actions side-by-side */
-  justify-content: space-between; /* Push details and actions apart */
-  align-items: center; /* Vertically align items */
-  padding: 0.6rem 0.2rem;
-  border-bottom: 1px solid var(--border-color); /* Separator line */
-}
-.item:last-child {
-  border-bottom: none; /* Remove border from last item */
-}
-.item-details {
-    display: flex;
-    flex-direction: column; /* Stack name and meta vertically */
-    gap: 0.1rem;
-    flex-grow: 1; /* Allow details to take up available space */
-    min-width: 0; /* Required for text-overflow to work correctly in flex items */
-    margin-right: 0.5rem; /* Space between details and action buttons */
-}
-.item-name {
-    font-weight: 500;
-    white-space: nowrap; /* Prevent wrapping */
-    overflow: hidden; /* Hide overflow */
-    text-overflow: ellipsis; /* Show ellipsis (...) for overflow */
-}
-.item-meta {
-    font-size: 0.8rem;
-    color: var(--secondary); /* Use secondary text color */
-    white-space: normal; /* Allow description text to wrap */
-    overflow: hidden; /* Hide overflow */
-    /* text-overflow: ellipsis; */ /* Ellipsis might not be desired for wrapped text */
-    display: -webkit-box; /* Optional: Limit description to N lines with ellipsis */
-   -webkit-line-clamp: 2; /* Limit to 2 lines */
-   -webkit-box-orient: vertical;
-}
-.item-actions {
-   display: flex;
-   gap: 0.5rem; /* Space between action buttons */
-   flex-shrink: 0; /* Prevent action buttons from shrinking */
-}
-/* Smaller button style */
-.btn-sm {
-  padding: 0.2rem 0.5rem;
-  font-size: 0.75rem;
-}
-/* Styles for loading/error/placeholder messages */
-.loading, .error-message, .placeholder-content {
-    padding: 1rem;
-    text-align: center;
-    color: var(--secondary);
-    font-size: 0.9rem;
-}
-.error-message {
-    color: var(--danger); /* Use danger color for errors */
-    background-color: #f8d7da; /* Light red background */
-    border: 1px solid #f5c6cb; /* Reddish border */
-    border-radius: var(--border-radius);
-    margin-bottom: 1rem; /* Space below error message */
-}
-/* Style for disabled action buttons */
-.btn-danger:disabled, .btn-secondary:disabled {
-    cursor: not-allowed; /* Indicate non-interactive state */
-    opacity: 0.65; /* Make it look faded */
-}
+/* Styles remain largely the same, remove styles specific to .add-form if desired */
+.panel-body { max-height: 400px; overflow-y: auto; padding-top: 0; }
+/* .add-form styles can be removed */
+.item-list { list-style: none; padding: 0; margin: 0; }
+.item { display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 0.2rem; border-bottom: 1px solid var(--border-color); }
+.item:last-child { border-bottom: none; }
+.item-details { display: flex; flex-direction: column; gap: 0.1rem; flex-grow: 1; min-width: 0; margin-right: 0.5rem; }
+.item-name { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.item-meta { font-size: 0.8rem; color: var(--secondary); white-space: normal; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.item-actions { display: flex; gap: 0.5rem; flex-shrink: 0; }
+.btn-sm { padding: 0.2rem 0.5rem; font-size: 0.75rem; }
+.loading, .error-message, .placeholder-content { padding: 1rem; text-align: center; color: var(--secondary); font-size: 0.9rem; }
+.error-message { color: var(--danger); background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: var(--border-radius); margin-bottom: 1rem; }
+.btn-danger:disabled, .btn-secondary:disabled { cursor: not-allowed; opacity: 0.65; }
+/* Added styles */
+.color-square { display: inline-block; width: 1em; height: 1em; border: 1px solid #ccc; margin-right: 0.5em; vertical-align: middle; flex-shrink: 0; }
+.item { align-items: center; } /* Ensure vertical alignment with color square */
 </style>
 

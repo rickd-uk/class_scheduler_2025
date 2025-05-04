@@ -65,9 +65,9 @@
         v-if="store.state.ui.modals.weeklySchedule"
         :key="'weeklySchedule-' + store.state.ui.modals.weeklySchedule"
     />
-    <TextbookEditorModal
-        v-if="store.state.ui.modals.textbookEditor"
-        :key="'textbookEditor-' + store.state.ui.modals.textbookEditor"
+    <TextbookFormModal
+        v-if="store.state.ui.modals.textbookFormModal"
+        :key="'textbookFormModal-' + store.state.ui.modals.textbookFormModal"
     />
     <LinkTextbookModal
         v-if="store.state.ui.modals.linkTextbookModal"
@@ -104,7 +104,7 @@ import ExceptionPatternsPanel from './components/panels/ExceptionPatternsPanel.v
 import TemplateEditorModal from './components/modals/TemplateEditorModal.vue'
 import DailyExceptionModal from './components/modals/DailyExceptionModal.vue'
 import WeeklyScheduleModal from './components/modals/WeeklyScheduleModal.vue'
-import TextbookEditorModal from './components/modals/TextbookEditorModal.vue'
+import TextbookFormModal from './components/modals/TextbookFormModal.vue'
 import LinkTextbookModal from './components/modals/LinkTextbookModal.vue'
 import DayOffEditorModal from './components/modals/DayOffEditorModal.vue'
 import ExceptionPatternEditorModal from './components/modals/ExceptionPatternEditorModal.vue'; // <-- Import Modal
@@ -120,8 +120,8 @@ const router = useRouter();
 
 
 // --- Watchers for Debugging ---
-watch(() => store.state.ui.modals.textbookEditor, (newValue, oldValue) => {
-  console.log(`[App.vue Watcher] textbookEditor modal state changed from ${oldValue} to ${newValue}`);
+watch(() => store.state.ui.modals.textbookFormModal, (newValue, oldValue) => {
+  console.log(`[App.vue Watcher] textbookFormModal modal state changed from ${oldValue} to ${newValue}`);
 });
 watch(() => store.state.ui.modals.weeklySchedule, (newValue, oldValue) => {
   console.log(`[App.vue Watcher] weeklySchedule modal state changed from ${oldValue} to ${newValue}`);
