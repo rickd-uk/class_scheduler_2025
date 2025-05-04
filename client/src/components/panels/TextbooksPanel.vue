@@ -1,9 +1,9 @@
 <template>
   <div class="panel textbooks-panel">
      <div class="panel-header">
-      <h3 class="panel-title">Manage Textbooks</h3>
+      <h3 class="panel-title">Textbooks</h3>
       <button class="btn btn-sm btn-primary" @click="openAddModal">
-          Add Textbook
+          +
       </button>
     </div>
     <div class="panel-body">

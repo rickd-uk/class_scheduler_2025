@@ -1,9 +1,9 @@
 <template>
   <div class="panel exception-patterns-panel">
     <div class="panel-header">
-      <h3 class="panel-title">Exception Patterns</h3>
+      <h3 class="panel-title">Exceptions</h3>
       <button class="btn btn-sm btn-primary" @click="openAddModal">
-        + Create Pattern
+        +
       </button>
     </div>
     <div class="panel-body">

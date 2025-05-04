@@ -1,9 +1,9 @@
 <template>
   <div class="panel days-off-panel">
     <div class="panel-header">
-      <h3 class="panel-title">Manage Days Off</h3>
+      <h3 class="panel-title">Days Off</h3>
        <button class="btn btn-sm btn-primary" @click="showAddForm = !showAddForm">
-          {{ showAddForm ? 'Cancel' : '+ Add Day Off' }}
+          {{ showAddForm ? 'Cancel' : '+' }}
       </button>
     </div>
     <div class="panel-body">
