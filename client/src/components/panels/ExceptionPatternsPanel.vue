@@ -74,10 +74,6 @@ const openEditModal = (pattern) => {
 
 // Handles deleting a pattern
 const handleDeletePattern = async (id) => {
-   // Confirmation dialog (consider replacing with a custom confirm modal later)
-   if (!confirm(`Are you sure you want to delete this exception pattern? This cannot be undone.`)) {
-      return; // Stop if user cancels
-   }
    // Set loading state for the specific delete button
    deletingPatternId.value = id;
    deleteError.value = null; // Clear previous errors

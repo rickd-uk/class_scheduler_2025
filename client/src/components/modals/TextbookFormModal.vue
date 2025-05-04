@@ -34,7 +34,7 @@
           <button @click="closeModal" type="button" class="btn btn-secondary btn-sm" :disabled="isLoading">
             Close </button>
           <button type="submit" class="btn btn-primary btn-sm" :disabled="isLoading">
-            {{ isLoading ? (isEditing ? 'Updating...' : 'Adding...') : (isEditing ? 'Save Changes' : 'Add Textbook') }}
+            {{ isLoading ? (isEditing ? 'Updating...' : 'Adding...') : (isEditing ? 'Save' : 'Add') }}
           </button>
         </div>
       </form>

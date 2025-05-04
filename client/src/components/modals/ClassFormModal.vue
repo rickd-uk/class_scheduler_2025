@@ -75,7 +75,7 @@
             Close
           </button>
           <button type="submit" class="btn btn-primary btn-sm" :disabled="isLoading">
-            {{ isLoading ? (isEditing ? 'Updating...' : 'Adding...') : (isEditing ? 'Save Changes' : 'Add Class') }}
+            {{ isLoading ? (isEditing ? 'Updating...' : 'Adding...') : (isEditing ? 'Save' : 'Add') }}
           </button>
         </div>
       </form>
