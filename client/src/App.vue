@@ -19,6 +19,7 @@
               <ClassesPanel />
               <SchoolYearPanel />
               <DaysOffPanel />
+              <ExceptionPatternsPanel />
             </div>
           </div>
           <div class="right-column">
@@ -76,6 +77,10 @@
         v-if="store.state.ui.modals.dayOffEditor"
         :key="'dayOffEditor-' + store.state.ui.modals.dayOffEditor"
     />
+    <ExceptionPatternEditorModal
+        v-if="store.state.ui.modals.exceptionPatternEditor"
+        :key="'exceptionPatternEditor-' + store.state.ui.modals.exceptionPatternEditor"
+    />
     </div>
 </template>
 
@@ -93,6 +98,7 @@ import DaysOffPanel from './components/panels/DaysOffPanel.vue'
 import TemplatesPanel from './components/panels/TemplatesPanel.vue'
 import WeeklySchedulePanel from './components/panels/WeeklySchedulePanel.vue'
 import DailySchedulePanel from './components/panels/DailySchedulePanel.vue'
+import ExceptionPatternsPanel from './components/panels/ExceptionPatternsPanel.vue'; // <-- Import Panel
 
 // Modal Imports
 import TemplateEditorModal from './components/modals/TemplateEditorModal.vue'
@@ -101,6 +107,7 @@ import WeeklyScheduleModal from './components/modals/WeeklyScheduleModal.vue'
 import TextbookEditorModal from './components/modals/TextbookEditorModal.vue'
 import LinkTextbookModal from './components/modals/LinkTextbookModal.vue'
 import DayOffEditorModal from './components/modals/DayOffEditorModal.vue'
+import ExceptionPatternEditorModal from './components/modals/ExceptionPatternEditorModal.vue'; // <-- Import Modal
 
 
 // Auth Imports
@@ -131,6 +138,8 @@ watch(() => store.state.ui.modals.dailyException, (newValue, oldValue) => {
 watch(() => store.state.ui.modals.dayOffEditor, (newValue, oldValue) => {
   console.log(`[App.vue Watcher] dayOffEditor modal state changed from ${oldValue} to ${newValue}`);
 });
+// *** Add watcher for exceptionPatternEditor ***
+watch(() => store.state.ui.modals.exceptionPatternEditor, (newValue, oldValue) => { console.log(`[App.vue Watcher] exceptionPatternEditor modal state changed from ${oldValue} to ${newValue}`); });
 
 
 // --- Component State ---
@@ -164,6 +173,8 @@ const loadInitialData = () => {
     store.dispatch('schedule/fetchRegularSchedule');
     store.dispatch('schoolYear/fetchSchoolYear');
     store.dispatch('daysOff/fetchDaysOff');
+    // *** Fetch exception patterns ***
+    store.dispatch('exceptionPatterns/fetchPatterns');
     activeComponent.value = componentsMap[activeTab.value] || WeeklySchedulePanel;
   } else {
      console.log("User not authenticated.");
@@ -180,6 +191,11 @@ watch(isAuthenticated, (newValue, oldValue) => {
   } else {
     activeComponent.value = null;
     showLogin.value = true;
+    // Optionally reset other stores on logout
+    // store.dispatch('classes/RESET_STATE'); // Example
+    // store.dispatch('textbooks/RESET_STATE'); // Example
+    // store.dispatch('schedule/RESET_STATE'); // Example
+    // store.dispatch('exceptionPatterns/RESET_STATE'); // Example
   }
 }, { immediate: true });
 

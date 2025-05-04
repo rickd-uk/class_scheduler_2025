@@ -9,6 +9,7 @@ export default {
       textbookEditor: false,
       linkTextbookModal: false, // Add state for the link modal
       dayOffEditor: false,
+      exceptionPatternEditor: false,
       // classEditor: false,
     },
     modalData: {
@@ -17,8 +18,8 @@ export default {
       weeklySchedule: null,
       textbookEditor: null,
       linkTextbookModal: null, // Add state for link modal data (the class object)
-
       dayOffEditor: null,
+      exceptionPatternEditor: null,
       // classEditor: null,
     },
     isLoading: false,

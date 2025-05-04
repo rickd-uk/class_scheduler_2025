@@ -5,13 +5,21 @@
         <button @click="goToPreviousDay" class="nav-button day-nav" title="Previous Day">&lt;</button>
         <div class="date-display-container">
             <h2 class="panel-title date-title" @click="showDatePicker = !showDatePicker" title="Click to select date">
-                {{ formattedDate }}
+                {{ formattedDate || 'Select Date' }}
             </h2>
             <span v-if="relativeDateString" class="relative-date-indicator">
                 ({{ relativeDateString }})
             </span>
         </div>
-        <input v-if="showDatePicker" type="date" v-model="selectedDate" @change="loadDailySchedule" class="form-control date-picker-overlay" @blur="showDatePicker = false" ref="datePickerInput"/>
+        <input
+            v-if="showDatePicker"
+            type="date"
+            v-model="selectedDate"
+            @change="loadDailySchedule"
+            class="form-control date-picker-overlay"
+            @blur="showDatePicker = false"
+            ref="datePickerInput"
+        />
         <button @click="goToNextDay" class="nav-button day-nav" title="Next Day">&gt;</button>
         <button @click="goToNextMonth" class="nav-button month-nav" title="Next Month">&gt;&gt;</button>
     </div>
@@ -20,10 +28,10 @@
     <div v-if="isLoading" class="loading">Loading schedule...</div>
     <div v-else-if="error" class="error-message">{{ error }}</div>
     <div v-else class="schedule-content">
-          <div
+        <div
             v-if="isDayOff"
             class="day-off-notice"
-            :style="{ backgroundColor: dayOffColor || '#F0F0F0' }"
+            :style="{ borderLeftColor: dayOffColor || '#F0F0F0' }"
             :class="{ 'has-dark-background': isDarkColor(dayOffColor) }"
         >
             <h3>Day Off</h3>
@@ -46,10 +54,10 @@
                 </li>
             </ul>
          </div>
-         <p v-else class="placeholder-content">No schedule for {{ formattedDate }}.</p>
+         <p v-else class="placeholder-content">No schedule for {{ formattedDate || 'selected date' }}.</p>
          <div v-if="!isDayOff" class="exception-controls mt-3">
             <button class="btn btn-secondary btn-sm" @click="openExceptionModal">
-                Edit Exceptions for {{ formattedDate }}
+                Edit Exceptions for {{ formattedDate || 'selected date' }}
             </button>
          </div>
     </div>
@@ -57,7 +65,6 @@
 </template>
 
 <script setup>
-// Import nextTick along with other Vue functions
 import { ref, computed, onMounted, watch, nextTick } from 'vue';
 import { useStore } from 'vuex';
 
@@ -75,12 +82,15 @@ const toYYYYMMDD = (date) => {
         console.warn("[toYYYYMMDD] Invalid date object received:", date);
         return null; // Return null for invalid dates
     }
-    // Create a new date adjusted for the local timezone offset
-    const offset = date.getTimezoneOffset() * 60000;
-    const localDate = new Date(date.getTime() - offset);
-    const dateString = localDate.toISOString().split('T')[0];
-    // console.log(`[toYYYYMMDD] Converted ${date} to ${dateString}`); // Log conversion
-    return dateString;
+    try {
+        // Create a new date adjusted for the local timezone offset
+        const offset = date.getTimezoneOffset() * 60000;
+        const localDate = new Date(date.getTime() - offset);
+        return localDate.toISOString().split('T')[0];
+    } catch(e) {
+        console.error("[toYYYYMMDD] Error converting date:", e);
+        return null;
+    }
 };
 
 /**
@@ -90,7 +100,7 @@ const toYYYYMMDD = (date) => {
 const getTodayDateString = () => {
   const todayStr = toYYYYMMDD(new Date());
   console.log(`[getTodayDateString] Today is: ${todayStr}`);
-  return todayStr;
+  return todayStr || ''; // Return empty string if conversion fails
 };
 
 /**
@@ -99,27 +109,26 @@ const getTodayDateString = () => {
  * @returns {string} The lowercase day name ('sunday', 'monday', ..., 'saturday'). Returns empty string if input is invalid.
  */
 const getDayOfWeek = (dateString) => {
-    console.log(`[getDayOfWeek] Input dateString: ${dateString}`); // Log Input
+    // console.log(`[getDayOfWeek] Input dateString: ${dateString}`); // Log Input
     if (!dateString || typeof dateString !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
-        console.warn(`[getDayOfWeek] Invalid dateString received: ${dateString}`);
-        return ''; // Explicitly return empty string
+        // console.warn(`[getDayOfWeek] Invalid dateString received: ${dateString}`);
+        return '';
     }
     try {
-        // Create date object ensuring it uses local time interpretation by adding T00:00:00
-        const date = new Date(dateString + 'T00:00:00');
+        const date = new Date(dateString + 'T00:00:00'); // Ensure local time interpretation
         if (isNaN(date.getTime())) {
-             console.warn(`[getDayOfWeek] Could not parse dateString: ${dateString}`);
-             return ''; // Explicitly return empty string
+             // console.warn(`[getDayOfWeek] Could not parse dateString: ${dateString}`);
+             return '';
         }
-        const dayIndex = date.getDay(); // 0 for Sunday, 1 for Monday, etc.
-        console.log(`[getDayOfWeek] Parsed date: ${date}, Day index: ${dayIndex}`); // Log Parsed Date and Index
+        const dayIndex = date.getDay();
+        // console.log(`[getDayOfWeek] Parsed date: ${date}, Day index: ${dayIndex}`);
         const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
         const dayName = days[dayIndex];
-        console.log(`[getDayOfWeek] Returning day name: ${dayName}`); // Log Return Value
+        // console.log(`[getDayOfWeek] Returning day name: ${dayName}`);
         return dayName;
     } catch (e) {
         console.error(`[getDayOfWeek] Error processing dateString ${dateString}:`, e);
-        return ''; // Explicitly return empty string on error
+        return '';
     }
 }
 
@@ -130,13 +139,13 @@ const getDayOfWeek = (dateString) => {
  */
 const formatDate = (dateString) => {
     if (!dateString || typeof dateString !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
-         console.warn(`[formatDate] Invalid dateString received: ${dateString}`);
-         return 'Invalid Date'; // Return placeholder for invalid input
+         // console.warn(`[formatDate] Invalid dateString received: ${dateString}`);
+         return 'Invalid Date';
     }
     try {
         const date = new Date(dateString + 'T00:00:00'); // Ensure local time
         if (isNaN(date.getTime())) {
-             console.warn(`[formatDate] Could not parse dateString: ${dateString}`);
+             // console.warn(`[formatDate] Could not parse dateString: ${dateString}`);
              return 'Invalid Date';
         }
         // Use browser's default locale settings for formatting
@@ -150,97 +159,92 @@ const formatDate = (dateString) => {
 }
 
 // --- Define Period Times ---
-// Assign representative start times for each period
-const periodTimes = ['09:00', '10:00', '11:00', '13:00', '14:00', '15:00']; // Adjust as needed
+const periodTimes = ['09:00', '10:00', '11:00', '13:00', '14:00', '15:00']; // Example times
 
 // --- State ---
 const selectedDate = ref(getTodayDateString()); // Initialize with today's date
-const dailySchedule = ref([]); // Holds the final, sorted schedule for display
-const isLoading = ref(false); // Local loading state for this panel
+const dailySchedule = ref([]); // Holds the final processed schedule for the selected date
+const isLoading = ref(false); // Local loading state for this panel's operations
 const error = ref(null); // Local error state for this panel
 const showDatePicker = ref(false); // State to toggle date picker visibility
 const datePickerInput = ref(null); // Ref for the date input element
 
 // --- Computed Properties ---
+// Get data from Vuex store
 const regularSchedule = computed(() => store.getters['schedule/regularSchedule']);
-const exceptions = computed(() => store.getters['schedule/dailyExceptions']);
-const daysOff = computed(() => store.getters['daysOff/allDaysOff']); // Get the list of day off objects
+const appliedExceptions = computed(() => store.getters['schedule/appliedExceptions']);
+const daysOff = computed(() => store.getters['daysOff/allDaysOff']);
 const classes = computed(() => store.getters['classes/allClasses']);
-// Format the selected date for display
+// Format date for display
 const formattedDate = computed(() => formatDate(selectedDate.value));
 
-// Determine if the selected date is marked as a day off
+// Determine if the selected date is a day off (checking both global and applied exceptions)
 const isDayOff = computed(() => {
     if (!selectedDate.value) return false;
-    // Check both the global daysOff list (using the getter) and any daily exceptions marked as day off
-    const isGlobalDayOff = store.getters['daysOff/isDayOff'](selectedDate.value); // Use the getter
-    const exceptionInfo = exceptions.value.find(e => e.date === selectedDate.value);
-    return isGlobalDayOff || (exceptionInfo && exceptionInfo.isDayOff);
+    const isGlobalDayOff = store.getters['daysOff/isDayOff'](selectedDate.value);
+    let exceptionIsDayOff = false;
+    // Add safety check here too
+    if (Array.isArray(appliedExceptions.value)) {
+        const exceptionInfo = appliedExceptions.value.find(e => e.date === selectedDate.value);
+        exceptionIsDayOff = exceptionInfo && exceptionInfo.isDayOff;
+    } else {
+        // Don't warn here constantly, data might just not be loaded yet
+        // console.warn("[isDayOff computed] appliedExceptions.value is not an array yet:", appliedExceptions.value);
+    }
+    return isGlobalDayOff || exceptionIsDayOff;
 });
 
-
-// Get color for the day off notice background
+// Get color for the day off notice border
 const dayOffColor = computed(() => {
-    if (!isDayOff.value) return null; // No color if not a day off
-    const exceptionInfo = exceptions.value.find(e => e.date === selectedDate.value);
-    // Prioritize exception color if it exists and marks the day off
-    if (exceptionInfo && exceptionInfo.isDayOff) return exceptionInfo.color || '#F0F0F0';
-    // Otherwise, check the global days off list
+    if (!isDayOff.value) return null;
+     let exceptionColor = null;
+     // Check appliedExceptions array safely
+     if(Array.isArray(appliedExceptions.value)) {
+        const exceptionInfo = appliedExceptions.value.find(e => e.date === selectedDate.value);
+        if (exceptionInfo && exceptionInfo.isDayOff) {
+            exceptionColor = exceptionInfo.color || '#F0F0F0'; // Use exception color or default
+        }
+     }
+     if(exceptionColor) return exceptionColor; // Prioritize exception color
+
     const dayOffInfo = daysOff.value.find(d => d.date === selectedDate.value);
-    // Return the color from the global list or a default
-    return dayOffInfo?.color || '#F0F0F0';
+    return dayOffInfo?.color || '#F0F0F0'; // Use day off color or default
 });
 
-
-// Get the reason for the day off, if applicable
+// Get the reason associated with the day off
 const dayOffReason = computed(() => {
     if (!isDayOff.value) return '';
-    // Prioritize exception reason if it exists and marks the day off
-    const exceptionInfo = exceptions.value.find(e => e.date === selectedDate.value);
-    if (exceptionInfo && exceptionInfo.isDayOff) return exceptionInfo.reason || 'Day Off (Exception)';
-    // Otherwise, check the global days off list
+    let exceptionReason = null;
+    // Check appliedExceptions array safely
+    if (Array.isArray(appliedExceptions.value)) {
+        const exceptionInfo = appliedExceptions.value.find(e => e.date === selectedDate.value);
+        if (exceptionInfo && exceptionInfo.isDayOff) {
+            exceptionReason = exceptionInfo.reason || 'Day Off (Exception)';
+        }
+    }
+    if (exceptionReason) return exceptionReason; // Prioritize exception reason
+
     const dayOffInfo = daysOff.value.find(d => d.date === selectedDate.value); // Find the object to get the reason
     if (dayOffInfo) return dayOffInfo.reason;
     // Default fallback
     return 'Day Off';
 });
 
-// --- Computed Property for Relative Date ---
+// Determine relative date string (Today, Yesterday, etc.)
 const relativeDateString = computed(() => {
     if (!selectedDate.value) return '';
     const todayStr = getTodayDateString();
-    if (!todayStr) return ''; // Handle error from helper
-
-    if (selectedDate.value === todayStr) {
-        return 'Today';
-    }
-
-    // Calculate yesterday
-    const yesterdayDate = new Date(); // Today's date object
-    yesterdayDate.setDate(yesterdayDate.getDate() - 1); // Set to yesterday
-    const yesterdayStr = toYYYYMMDD(yesterdayDate); // Format as string
-    if (yesterdayStr && selectedDate.value === yesterdayStr) {
-        return 'Yesterday';
-    }
-
-    // Calculate tomorrow
-    const tomorrowDate = new Date(); // Today's date object
-    tomorrowDate.setDate(tomorrowDate.getDate() + 1); // Set to tomorrow
-    const tomorrowStr = toYYYYMMDD(tomorrowDate); // Format as string
-     if (tomorrowStr && selectedDate.value === tomorrowStr) {
-        return 'Tomorrow';
-    }
-
-    // Calculate 2 days ago
-    const twoDaysAgoDate = new Date();
-    twoDaysAgoDate.setDate(twoDaysAgoDate.getDate() - 2);
+    if (!todayStr || selectedDate.value === 'Invalid Date') return '';
+    if (selectedDate.value === todayStr) return 'Today';
+    const yesterdayDate = new Date(); yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+    const yesterdayStr = toYYYYMMDD(yesterdayDate);
+    if (yesterdayStr && selectedDate.value === yesterdayStr) return 'Yesterday';
+    const tomorrowDate = new Date(); tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+    const tomorrowStr = toYYYYMMDD(tomorrowDate);
+     if (tomorrowStr && selectedDate.value === tomorrowStr) return 'Tomorrow';
+    const twoDaysAgoDate = new Date(); twoDaysAgoDate.setDate(twoDaysAgoDate.getDate() - 2);
     const twoDaysAgoStr = toYYYYMMDD(twoDaysAgoDate);
-    if (twoDaysAgoStr && selectedDate.value === twoDaysAgoStr) {
-        return '2 Days Ago';
-    }
-    // Add more conditions here for "X Days Ago/From Now" if desired
-
-    // Otherwise, return empty string (no indicator needed)
+    if (twoDaysAgoStr && selectedDate.value === twoDaysAgoStr) return '2 Days Ago';
     return '';
 });
 
@@ -249,22 +253,21 @@ const relativeDateString = computed(() => {
 
 /**
  * Parses the current selectedDate string into a Date object.
- * Handles potential invalid date strings.
  * @returns {Date | null} A Date object or null if parsing fails.
  */
 const getCurrentDateObject = () => {
-    console.log(`[getCurrentDateObject] Current selectedDate.value: ${selectedDate.value}`);
+    // console.log(`[getCurrentDateObject] Current selectedDate.value: ${selectedDate.value}`);
     if (!selectedDate.value) { console.warn("getCurrentDateObject: selectedDate is null/empty"); return null; }
     try {
         const date = new Date(selectedDate.value + 'T12:00:00'); // Add time component
         if (isNaN(date.getTime())) { console.warn("getCurrentDateObject: Parsed date is invalid"); return null; }
-        console.log(`[getCurrentDateObject] Parsed date object:`, date);
+        // console.log(`[getCurrentDateObject] Parsed date object:`, date);
         return date;
     } catch (e) { console.error("getCurrentDateObject: Error parsing date", e); return null; }
 };
 
 /**
- * Navigates the selectedDate by a specified number of days.
+ * Navigates the selectedDate by a number of days.
  * @param {number} daysToAdd - The number of days to add (can be negative).
  */
 const changeDay = (daysToAdd) => {
@@ -274,11 +277,15 @@ const changeDay = (daysToAdd) => {
     currentDate.setDate(currentDate.getDate() + daysToAdd);
     const newDateString = toYYYYMMDD(currentDate);
     console.log(`[changeDay] New calculated date string: ${newDateString}`);
-    selectedDate.value = newDateString; // Update the ref, triggering watcher
+    if (newDateString) { // Only update if the new date is valid
+        selectedDate.value = newDateString;
+    } else {
+        console.error("changeDay: Failed to calculate new date string.");
+    }
 };
 
 /**
- * Navigates the selectedDate by a specified number of months.
+ * Navigates the selectedDate by a number of months.
  * @param {number} monthsToAdd - The number of months to add (can be negative).
  */
 const changeMonth = (monthsToAdd) => {
@@ -289,7 +296,11 @@ const changeMonth = (monthsToAdd) => {
     currentDate.setMonth(currentDate.getMonth() + monthsToAdd);
     const newDateString = toYYYYMMDD(currentDate);
     console.log(`[changeMonth] New calculated date string: ${newDateString}`);
-    selectedDate.value = newDateString; // Update the ref
+     if (newDateString) { // Only update if the new date is valid
+        selectedDate.value = newDateString;
+    } else {
+         console.error("changeMonth: Failed to calculate new date string.");
+    }
 };
 
 // Navigation button handlers
@@ -298,93 +309,121 @@ const goToNextDay = () => { console.log("goToNextDay clicked"); changeDay(1); };
 const goToPreviousMonth = () => { console.log("goToPreviousMonth clicked"); changeMonth(-1); };
 const goToNextMonth = () => { console.log("goToNextMonth clicked"); changeMonth(1); };
 
-// Watcher to focus the date picker when it becomes visible
+// Watcher for showing/focusing the date picker overlay
 watch(showDatePicker, async (newValue) => {
     if (newValue) {
         await nextTick();
         datePickerInput.value?.focus();
-        datePickerInput.value?.showPicker();
+        try { datePickerInput.value?.showPicker(); } catch (e) { console.warn("showPicker() not supported or failed."); }
     }
 });
 
-// Loads and calculates the schedule for the currently selected date
+
+
 const loadDailySchedule = () => {
-  showDatePicker.value = false; // Hide picker on change
+  showDatePicker.value = false;
   isLoading.value = true;
   error.value = null;
-  let finalSchedule = [];
+  let processedScheduleItems = []; // Intermediate array before final mapping
 
-  // Ensure selectedDate is valid before proceeding
-  if (!selectedDate.value) {
-      console.warn("[DailySchedulePanel] No date selected in loadDailySchedule.");
-      error.value = "Please select a date.";
-      dailySchedule.value = [];
-      isLoading.value = false;
-      return;
-  }
+  if (!selectedDate.value || selectedDate.value === 'Invalid Date') { /* ... */ return; }
   console.log(`[DailySchedulePanel] loadDailySchedule STARTING for date: ${selectedDate.value}`);
-
-  if (isDayOff.value) {
-      console.log(`[DailySchedulePanel] Date ${selectedDate.value} is a day off.`);
-      dailySchedule.value = []; // Clear display schedule
-      isLoading.value = false;
-      return;
-  }
+  if (isDayOff.value) { /* ... */ isLoading.value = false; dailySchedule.value = []; return; }
 
   try {
     const dayOfWeek = getDayOfWeek(selectedDate.value);
-    // Check for valid dayOfWeek returned from helper
-    if (!dayOfWeek || dayOfWeek === 'sunday' || dayOfWeek === 'saturday') {
-        console.log(`[DailySchedulePanel] Skipping schedule load for invalid/weekend day: '${dayOfWeek}' (Date: ${selectedDate.value})`);
-        dailySchedule.value = []; // Clear schedule for weekends/invalid days
-        isLoading.value = false;
-        return;
+    if (!dayOfWeek || dayOfWeek === 'sunday' || dayOfWeek === 'saturday') { /* ... */ isLoading.value = false; dailySchedule.value = []; return; }
+
+    let appliedExceptionData = null;
+    if (Array.isArray(appliedExceptions.value)) {
+        // Find applied exception that is NOT a day off and HAS a pattern
+        appliedExceptionData = appliedExceptions.value.find(e =>
+            e.date === selectedDate.value &&
+            !e.isDayOff &&
+            e.exceptionPatternId &&
+            e.ExceptionPattern?.patternData // Ensure pattern data is loaded
+        );
+    }
+    console.log(`[DailySchedulePanel] Applied Exception data for ${selectedDate.value}:`, appliedExceptionData);
+
+    // --- Determine schedule source: Base or Exception Pattern ---
+    if (appliedExceptionData) {
+        // --- Use Exception Pattern ---
+        console.log("[DailySchedulePanel] Applying exception pattern:", appliedExceptionData.ExceptionPattern.name);
+        const patternSequence = appliedExceptionData.ExceptionPattern.patternData; // Array of original period numbers [4, 5, 1, null, ...]
+        const baseScheduleForDay = regularSchedule.value?.[dayOfWeek] || [];
+
+        // Iterate through the pattern sequence to build the schedule items for the day
+        patternSequence.forEach((originalPeriodNumber, newPeriodIndex) => {
+            if (originalPeriodNumber !== null) {
+                // Find the classId from the original schedule slot
+                const baseItem = baseScheduleForDay[originalPeriodNumber - 1]; // Adjust index
+                if (baseItem && baseItem.classId) {
+                    // Add item to our list, assign time based on NEW index
+                    processedScheduleItems.push({
+                        classId: baseItem.classId,
+                        time: periodTimes[newPeriodIndex] || `P${newPeriodIndex + 1}`, // Time based on new order
+                        isException: true // Mark that this day follows a pattern
+                        // Color and className will be added in the final mapping step
+                    });
+                } else {
+                    // If the original period was empty, this new slot is also empty
+                     console.log(`[DailySchedulePanel] Original period ${originalPeriodNumber} was empty in base schedule.`);
+                }
+            }
+             // If originalPeriodNumber is null, this new period slot is intentionally empty
+        });
+        console.log("[DailySchedulePanel] Schedule items generated from pattern (before class lookup):", JSON.parse(JSON.stringify(processedScheduleItems)));
+
+    } else {
+        // --- Use Regular Schedule (Base) ---
+        console.log("[DailySchedulePanel] Using regular schedule.");
+        const baseSchedule = regularSchedule.value?.[dayOfWeek] || [];
+        console.log(`[DailySchedulePanel] Base schedule for ${dayOfWeek}:`, JSON.parse(JSON.stringify(baseSchedule)));
+        // Map base schedule items, adding time based on period index
+        processedScheduleItems = baseSchedule
+            .map((item, index) => {
+                if (item && item.classId) {
+                    return {
+                        classId: item.classId,
+                        time: periodTimes[index] || `P${index + 1}`, // Assign time
+                        isException: false
+                    };
+                }
+                return null;
+            })
+            .filter(item => item !== null); // Remove empty slots
+        console.log("[DailySchedulePanel] Schedule items generated from base:", JSON.parse(JSON.stringify(processedScheduleItems)));
+    }
+    // --- End Schedule Source Determination ---
+
+
+    // Check for items missing 'time' before sorting (should be safe now)
+    const itemsMissingTime = processedScheduleItems.filter(item => typeof item.time !== 'string' || !item.time);
+    if (itemsMissingTime.length > 0) {
+        console.error("[DailySchedulePanel] ERROR: Items missing 'time' property before sort:", itemsMissingTime);
+        throw new Error("Error processing schedule: Found items missing 'time'.");
     }
 
-    const baseSchedule = regularSchedule.value?.[dayOfWeek] || [];
-    const exceptionData = exceptions.value.find(e => e.date === selectedDate.value);
+    // Sort the final schedule by time
+    processedScheduleItems.sort((a, b) => a.time.localeCompare(b.time));
 
-    console.log(`[DailySchedulePanel] Base schedule for ${dayOfWeek}:`, JSON.parse(JSON.stringify(baseSchedule)));
-    console.log(`[DailySchedulePanel] Exception data for ${selectedDate.value}:`, exceptionData);
+     // --- Map class IDs to formatted names AND COLOR, and filter out deleted classes ---
+     const finalMappedSchedule = processedScheduleItems.map(item => {
+         if (!item) return null; // Safety check
 
-    // Create initial schedule from base, adding time
-    finalSchedule = baseSchedule
-        .map((item, index) => {
-            if (item && item.classId) { return { classId: item.classId, time: periodTimes[index] || `P${index + 1}`, isException: false }; }
-            return null;
-        })
-        .filter(item => item !== null);
-    console.log("[DailySchedulePanel] Schedule after processing base:", JSON.parse(JSON.stringify(finalSchedule)));
-
-    // Apply exceptions
-    if (exceptionData && exceptionData.changes && Array.isArray(exceptionData.changes)) {
-      exceptionData.changes.forEach(change => {
-         if (!change.time) { console.warn("[DailySchedulePanel] Skipping exception change missing 'time':", change); return; }
-         const existingIndex = finalSchedule.findIndex(item => item.time === change.time);
-         if (change.action === 'cancel' || change.action === 'delete') { if (existingIndex !== -1) { finalSchedule.splice(existingIndex, 1); } }
-         else if (change.action === 'add' || change.action === 'create') { if (existingIndex === -1) { finalSchedule.push({ ...change, isException: true }); } else { console.warn(`Exception add at existing time ${change.time}.`); finalSchedule[existingIndex] = { ...change, isException: true }; } }
-         else if (change.action === 'update') { if (change.time) { if (existingIndex !== -1) { finalSchedule[existingIndex] = { ...finalSchedule[existingIndex], ...change, isException: true }; } else { console.warn(`Update non-existent item at ${change.time}, adding.`); finalSchedule.push({ ...change, isException: true }); } } else { console.warn("Update change missing 'time'"); } }
-      });
-       console.log("[DailySchedulePanel] Schedule after applying exceptions:", JSON.parse(JSON.stringify(finalSchedule)));
-    }
-
-    // Check for items missing 'time' before sorting
-    const itemsMissingTime = finalSchedule.filter(item => typeof item.time === 'undefined' || item.time === null);
-    if (itemsMissingTime.length > 0) { console.error("[DailySchedulePanel] ERROR: Items missing 'time' property before sort:", itemsMissingTime); error.value = "Error processing schedule: Found items missing 'time'."; dailySchedule.value = []; isLoading.value = false; return; }
-
-    // Sort schedule by time
-    finalSchedule.sort((a, b) => a.time.localeCompare(b.time));
-
-     // --- Map class IDs to formatted names AND COLOR, and filter out deleted ---
-     finalSchedule = finalSchedule.map(item => {
          const cls = item.classId ? classes.value.find(c => String(c.id) === String(item.classId)) : null;
-         if (item.classId && !cls) { console.log(`[DailySchedulePanel] Class ID ${item.classId} not found (deleted). Filtering out.`); return null; } // Mark deleted for filtering
+         // If classId exists but class not found, filter it out
+         if (item.classId && !cls) {
+             console.log(`[DailySchedulePanel] Class ID ${item.classId} not found (deleted). Filtering out.`);
+             return null;
+         }
 
          let displayClassName = null;
-         let itemColor = null; // Variable to hold color
+         // Use color from the class data if available, otherwise default
+         let itemColor = cls ? (cls.color || '#FFFFFF') : '#EEEEEE'; // Default for non-class items
 
          if (cls) { // If class details were found
-             itemColor = cls.color || '#FFFFFF'; // Get class color or default white
              if (cls.classType === 'numbered') {
                  const yearNum = parseInt(cls.yearLevel, 10);
                  const displayYear = yearNum <= 3 ? yearNum : yearNum - 3;
@@ -394,81 +433,99 @@ const loadDailySchedule = () => {
                  displayClassName = cls.className;
                  if (cls.yearLevel) { displayClassName += ` (Yr ${cls.yearLevel})`; }
              } else { displayClassName = 'Unknown Class Type'; }
-         } else if (item.isException && item.notes) {
+         } else if (item.notes) { // Handle items defined purely by pattern notes (future enhancement)
              displayClassName = item.notes;
-             itemColor = item.color || '#EEEEEE'; // Optional: Color for note-only exceptions
+             // itemColor = item.color || '#EEEEEE'; // Use exception color if available
          }
 
-         // Return the item with className and color, or null if it was marked for removal
-         return item ? { ...item, className: displayClassName, color: itemColor } : null;
+         // Return the final item object for display
+         return { ...item, className: displayClassName, color: itemColor };
 
-     }).filter(item => item !== null); // Filter out null items (deleted classes)
+     }).filter(item => item !== null); // Filter out nulls (deleted classes)
      // --- End Mapping and Filtering ---
 
     // Update the component's reactive ref used for display
-    dailySchedule.value = finalSchedule;
+    dailySchedule.value = finalMappedSchedule;
     console.log("[DailySchedulePanel] Final sorted schedule for display (with color):", JSON.parse(JSON.stringify(dailySchedule.value)));
 
   } catch (err) {
     console.error("[DailySchedulePanel] Error processing daily schedule:", err);
-    error.value = "Failed to calculate daily schedule.";
-    dailySchedule.value = [];
+    error.value = err.message || "Failed to calculate daily schedule.";
+    dailySchedule.value = []; // Clear display on error
   } finally {
-    isLoading.value = false;
+    isLoading.value = false; // Ensure loading state is always reset
   }
 };
 
+
 // Opens the modal for editing daily exceptions
 const openExceptionModal = () => {
-    if (!selectedDate.value) return;
-    console.log("Trigger Edit Exception Modal for:", selectedDate.value);
-    const existingException = exceptions.value.find(e => e.date === selectedDate.value);
+    if (!selectedDate.value) {
+        console.error("[openExceptionModal] Cannot open modal, no date selected.");
+        return;
+    }
+    console.log(`[openExceptionModal] Triggered for date: ${selectedDate.value}`);
+
+    let existingException = null;
+    // Access state directly for safety during potential initial load race conditions
+    const currentExceptions = store.state.schedule.dailyExceptions;
+    console.log(`[openExceptionModal] Current store.state.schedule.dailyExceptions:`, JSON.parse(JSON.stringify(currentExceptions)));
+
+    if (Array.isArray(currentExceptions)) {
+        console.log(`[openExceptionModal] Searching for exception in array...`);
+        existingException = currentExceptions.find(e => e.date === selectedDate.value);
+        console.log(`[openExceptionModal] Found existing exception:`, existingException);
+    } else {
+        console.warn("[openExceptionModal] store.state.schedule.dailyExceptions is not an array:", currentExceptions);
+    }
+
+    console.log(`[openExceptionModal] Dispatching ui/openModal with data:`, { date: selectedDate.value, exception: existingException });
     store.dispatch('ui/openModal', {
         modalName: 'dailyException',
-        data: { date: selectedDate.value, exception: existingException }
+        data: { date: selectedDate.value, exception: existingException } // Pass date and potentially null exception
     });
 };
 
 // Helper to determine if a color is dark (needs light text)
-// Basic luminance calculation - adjust threshold as needed
 const isDarkColor = (hexColor) => {
-    if (!hexColor || hexColor.length < 7) return false; // Default to light text if no color
+    if (!hexColor || hexColor.length < 7) return false;
     try {
         const r = parseInt(hexColor.substring(1, 3), 16);
         const g = parseInt(hexColor.substring(3, 5), 16);
         const b = parseInt(hexColor.substring(5, 7), 16);
-        // Calculate luminance (standard formula)
         const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-        return luminance < 0.5; // Threshold for considering it dark
-    } catch (e) {
-        return false; // Error parsing color, default to light text
-    }
+        return luminance < 0.5;
+    } catch (e) { return false; }
 };
 
 
 // --- Watchers & Lifecycle ---
+watch(showDatePicker, async (newValue) => {
+    if (newValue) {
+        await nextTick();
+        datePickerInput.value?.focus();
+        try { datePickerInput.value?.showPicker(); } catch (e) { console.warn("showPicker() not supported or failed."); }
+    }
+});
 onMounted(() => {
   // Fetch necessary data on component mount if not already loaded
   if (!regularSchedule.value || Object.keys(regularSchedule.value).length === 0) { store.dispatch('schedule/fetchRegularSchedule'); }
-  if (exceptions.value.length === 0) { store.dispatch('schedule/fetchDailyExceptions'); }
-  if (daysOff.value.length === 0) { store.dispatch('daysOff/fetchDaysOff'); } // Fetch days off
+  // Use the correct action name if renamed
+  if (!appliedExceptions.value || appliedExceptions.value.length === 0) { store.dispatch('schedule/fetchAppliedExceptions'); }
+  if (daysOff.value.length === 0) { store.dispatch('daysOff/fetchDaysOff'); }
   if (classes.value.length === 0) { store.dispatch('classes/fetchClasses'); }
-  // Load schedule for the initial date (today)
-  // Use nextTick to ensure selectedDate is initialized before first load
+  if (store.getters['exceptionPatterns/allPatterns'].length === 0) { store.dispatch('exceptionPatterns/fetchPatterns'); }
+  // Load schedule for the initial date (today) after ensuring date is set
   nextTick(() => {
       loadDailySchedule();
   });
 });
-
-// Reload schedule when the selected date changes (via picker or buttons)
-watch(selectedDate, (newDate, oldDate) => {
-    console.log(`[Watcher selectedDate] Date changed from ${oldDate} to ${newDate}`);
-    loadDailySchedule(); // Ensure load is called on date change
-});
+// Reload schedule when the selected date changes
+watch(selectedDate, loadDailySchedule);
 // Reload schedule if the underlying data sources change
-watch([regularSchedule, exceptions, daysOff, classes], (newData, oldData) => {
+watch([regularSchedule, appliedExceptions, daysOff, classes], (newData, oldData) => {
     console.log("[Watcher schedule/exceptions/daysOff/classes] Data changed, reloading daily schedule.");
-    loadDailySchedule(); // Reload if underlying data changes
+    loadDailySchedule();
 }, { deep: true });
 
 </script>
@@ -503,14 +560,22 @@ watch([regularSchedule, exceptions, daysOff, classes], (newData, oldData) => {
 .exception-tag { font-size: 0.8em; color: var(--warning); font-weight: bold; margin-left: 0.5em; background-color: #fff3cd; padding: 0.1em 0.4em; border-radius: 3px; }
 /* Styles for the Day Off notice */
 .day-off-notice {
+    /* Use border-left-color for day off indication */
     border-left: 5px solid var(--border-color); /* Default border */
-    transition: border-left-color 0.3s ease;
+    transition: background-color 0.3s ease, border-left-color 0.3s ease; /* Transition background and border */
+    color: #333; /* Default text color */
     padding: 1.5rem;
-    background-color: var(--light);
+    background-color: var(--light); /* Default background */
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius);
     text-align: center;
     margin-top: 1rem;
+}
+.day-off-notice.has-dark-background {
+    color: #f8f9fa; /* Light text for dark background */
+}
+.day-off-notice.has-dark-background h3 {
+     color: #f8f9fa; /* Light text for dark background */
 }
 .day-off-notice h3 { margin-top: 0; margin-bottom: 0.5rem; color: var(--secondary); }
 /* Styles for the exception edit button area */
@@ -534,19 +599,7 @@ watch([regularSchedule, exceptions, daysOff, classes], (newData, oldData) => {
 .date-picker { display: none; }
 .header-divider { border: none; border-top: 1px solid var(--border-color); margin-top: 0.5rem; margin-bottom: 1rem; }
 
-/* Styles for color square and list item alignment */
-.color-square {
-    display: inline-block;
-    width: 1em;
-    height: 1em;
-    border: 1px solid #ccc;
-    margin-right: 0.5em;
-    vertical-align: middle; /* Align with text */
-    flex-shrink: 0; /* Prevent shrinking */
-}
-.item-color-indicator {
-    margin-right: 0.6em; /* Adjust spacing */
-}
+/* Styles for list item alignment with color */
 .item-text {
     flex-grow: 1; /* Allow text to take remaining space */
     white-space: nowrap; /* Prevent wrapping */

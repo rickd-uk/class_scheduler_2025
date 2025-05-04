@@ -7,11 +7,14 @@ import templates from './modules/templates'
 import daysOff from './modules/daysOff'
 import schoolYear from './modules/schoolYear'
 import ui from './modules/ui'
+import exceptionPatterns from './modules/exceptionPatterns' // <-- Import new module
 
+// Log registered modules for debugging purposes
 console.log("Registering Vuex modules:", {
-    auth, classes, textbooks, schedule, templates, daysOff, schoolYear, ui
+    auth, classes, textbooks, schedule, templates, daysOff, schoolYear, ui, exceptionPatterns // <-- Add to log
 });
 
+// Create and export the Vuex store instance
 export default createStore({
   modules: {
     auth,
@@ -21,9 +24,10 @@ export default createStore({
     templates,
     daysOff,
     schoolYear,
-    ui
+    ui,
+    exceptionPatterns // <-- Register new module here
   },
-  // Optional: Add root state/getters/mutations/actions if needed
+  // Optional: Add root state/getters/mutations/actions if needed globally
   // state: {},
   // getters: {},
   // mutations: {},
