@@ -1,129 +1,129 @@
-const express = require('express');
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
-const { User } = require('../models'); // Import User model
+const express = require("express");
+const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
+const { User } = require("../models"); // Assuming User model is in models/index.js
 
 const router = express.Router();
 
 // --- Registration ---
-router.post('/register', async (req, res) => {
+router.post("/register", async (req, res, next) => {
   const { username, email, password } = req.body;
 
   // Basic validation
   if (!username || !email || !password) {
-    return res.status(400).json({ message: 'Username, email, and password are required.' });
+    return res
+      .status(400)
+      .json({ message: "Username, email, and password are required." });
   }
+  // Add more validation as needed (e.g., password complexity)
 
   try {
-    // Check if user already exists
-    console.log(`[Register] Checking existence for email: ${email}`); // Log 1
+    // Check if email or username already exists
     const existingUser = await User.findOne({ where: { email: email } });
     if (existingUser) {
-      console.log(`[Register] Email already exists: ${email}`); // Log 2
-      return res.status(409).json({ message: 'Email already in use.' });
+      return res.status(409).json({ message: "Email already in use." });
+    }
+    const existingUsername = await User.findOne({
+      where: { username: username },
+    });
+    if (existingUsername) {
+      return res.status(409).json({ message: "Username already taken." });
     }
 
-    console.log(`[Register] Checking existence for username: ${username}`); // Log 3
-    const existingUsername = await User.findOne({ where: { username: username } });
-     if (existingUsername) {
-      console.log(`[Register] Username already exists: ${username}`); // Log 4
-      return res.status(409).json({ message: 'Username already taken.' });
-    }
+    // Create user (password hashing is handled by the model hook)
+    const newUser = await User.create({ username, email, password });
 
-    // Create user (password hashing handled by model hook)
-    let newUser;
-    try {
-        console.log(`[Register] Attempting User.create for: ${username}`); // Log 5 (Before create)
-        newUser = await User.create({ username, email, password });
-        console.log(`[Register] User.create successful for: ${username}, ID: ${newUser.id}`); // Log 6 (After create)
-    } catch (createError) {
-        // Catch errors specifically from User.create or its hooks
-        console.error("[Register] Error during User.create:", createError); // Log 7 (Create error)
-        // Check for Sequelize validation errors specifically from create
-        if (createError.name === 'SequelizeValidationError') {
-            const messages = createError.errors.map(err => err.message);
-            return res.status(400).json({ message: 'Validation failed during user creation', errors: messages });
-        }
-        // Throw other errors to be caught by the outer catch block
-        throw createError;
-    }
+    // --- Generate JWT for immediate login after registration ---
+    const tokenPayload = {
+      id: newUser.id,
+      username: newUser.username,
+      email: newUser.email, // Still include email in token
+      isAdmin: newUser.isAdmin, // Include isAdmin status
+    };
 
-
-    // Generate JWT Token
-    console.log(`[Register] Attempting JWT sign for user ID: ${newUser.id}`); // Log 8 (Before JWT)
-    const token = jwt.sign(
-      { id: newUser.id, username: newUser.username },
-      process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRES_IN || '1d' }
-    );
-    console.log(`[Register] JWT sign successful`); // Log 9 (After JWT)
-
-
-    // Return user info (without password) and token
-    res.status(201).json({
-      message: 'User registered successfully',
-      user: newUser, // toJSON method removes password
-      token: token
+    const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, {
+      expiresIn: process.env.JWT_EXPIRATION || "1d",
     });
 
+    // Respond with user info (excluding password) and token
+    const userResponse = newUser.toJSON(); // Use toJSON to exclude password
+    // Ensure isAdmin is included in the response user object if needed by frontend immediately
+    userResponse.isAdmin = newUser.isAdmin;
+
+    res.status(201).json({ user: userResponse, token });
   } catch (error) {
-    // Catch errors from findOne calls or re-thrown from User.create catch block
-    console.error("[Register] Outer Catch Block Error:", error); // Log 10 (Outer error)
-     // Check for Sequelize validation errors (might be redundant if caught above)
-    if (error.name === 'SequelizeValidationError') {
-        const messages = error.errors.map(err => err.message);
-        return res.status(400).json({ message: 'Validation failed', errors: messages });
+    console.error("Registration error:", error);
+    if (error.name === "SequelizeValidationError") {
+      const messages = error.errors.map((err) => err.message);
+      return res
+        .status(400)
+        .json({ message: "Validation failed", errors: messages });
     }
-    res.status(500).json({ message: 'Server error during registration.', error: error.message });
+    // Pass other errors to the central error handler
+    next(error);
   }
 });
 
 // --- Login ---
-router.post('/login', async (req, res) => {
+router.post("/login", async (req, res, next) => {
+  // *** Expect username instead of email ***
   const { username, password } = req.body;
 
+  // *** Update validation message ***
   if (!username || !password) {
-    return res.status(400).json({ message: 'Username and password are required.' });
+    return res
+      .status(400)
+      .json({ message: "Username and password are required." });
   }
 
   try {
-    console.log(`[Login] Finding user: ${username}`);
-    // Find user by username
-    const user = await User.findOne({ where: { username: username } });
+    // *** Find user by username ***
+    console.log(`Login attempt for username: ${username}`); // Log username
+    // Ensure isAdmin is fetched along with other necessary fields
+    const user = await User.findOne({ where: { username: username } }); // Find by username
+
     if (!user) {
-      console.log(`[Login] User not found: ${username}`);
-      return res.status(401).json({ message: 'Invalid credentials.' }); // User not found
+      console.log(
+        `Login attempt failed: User not found for username ${username}`,
+      );
+      return res.status(401).json({ message: "Invalid credentials." }); // User not found
     }
 
-    console.log(`[Login] Validating password for: ${username}`);
-    // Check password
-    const isMatch = await user.isValidPassword(password);
-    if (!isMatch) {
-       console.log(`[Login] Invalid password for: ${username}`);
-      return res.status(401).json({ message: 'Invalid credentials.' }); // Wrong password
+    // Validate password using instance method
+    const isValid = await user.isValidPassword(password);
+    if (!isValid) {
+      console.log(
+        `Login attempt failed: Invalid password for username ${username}`,
+      );
+      return res.status(401).json({ message: "Invalid credentials." }); // Incorrect password
     }
 
-    console.log(`[Login] Generating token for: ${username}`);
-    // Generate JWT Token
-    const token = jwt.sign(
-      { id: user.id, username: user.username },
-      process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRES_IN || '1d' }
-    );
-
-    console.log(`[Login] Login successful for: ${username}`);
-    // Return user info (without password) and token
-    res.status(200).json({
-      message: 'Login successful',
-      user: user, // toJSON removes password
-      token: token
+    // --- Generate JWT ---
+    // Include necessary fields in the token payload
+    const tokenPayload = {
+      id: user.id,
+      username: user.username,
+      email: user.email, // Still include email
+      isAdmin: user.isAdmin, // Include the isAdmin field
+    };
+    const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, {
+      expiresIn: process.env.JWT_EXPIRATION || "1d",
     });
 
+    // Respond with user info (excluding password) and token
+    const userResponse = user.toJSON();
+    // *** Ensure isAdmin is included in the response user object ***
+    userResponse.isAdmin = user.isAdmin;
+
+    console.log(
+      `Login successful for user ${user.id} (${user.username}), isAdmin: ${user.isAdmin}`,
+    );
+    res.status(200).json({ user: userResponse, token });
   } catch (error) {
-    console.error("[Login] Error:", error);
-    res.status(500).json({ message: 'Server error during login.', error: error.message });
+    console.error("Login error:", error);
+    // Pass errors to the central error handler
+    next(error);
   }
 });
 
 module.exports = router;
-

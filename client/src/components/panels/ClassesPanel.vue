@@ -1,9 +1,9 @@
 <template>
   <div class="panel classes-panel">
     <div class="panel-header">
-      <h3 class="panel-title">Manage Classes (English)</h3>
+      <h3 class="panel-title">Classes</h3>
       <button class="btn btn-sm btn-primary" @click="openAddModal">
-        Add Class
+        +
       </button>
     </div>
     <div class="panel-body">

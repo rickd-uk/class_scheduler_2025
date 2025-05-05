@@ -6,28 +6,14 @@
 
       <div class="form-group">
         <label for="login-username">Username</label>
-        <input
-          type="text"
-          id="login-username"
-          v-model="username"
-          required
-          class="form-control"
-          :disabled="isLoading"
-          @input="clearAuthError"
-        />
+        <input type="text" id="login-username" v-model="username" required class="form-control" :disabled="isLoading"
+          @input="clearAuthError" />
       </div>
 
       <div class="form-group">
         <label for="login-password">Password</label>
-        <input
-          type="password"
-          id="login-password"
-          v-model="password"
-          required
-          class="form-control"
-          :disabled="isLoading"
-           @input="clearAuthError"
-        />
+        <input type="password" id="login-password" v-model="password" required class="form-control"
+          :disabled="isLoading" @input="clearAuthError" />
       </div>
 
       <button type="submit" class="btn btn-primary" :disabled="isLoading">
@@ -78,9 +64,9 @@ const handleLogin = async () => {
 
 // Clear auth error when user starts typing
 const clearAuthError = () => {
-    if(authError.value) {
-        store.dispatch('auth/clearError');
-    }
+  if (authError.value) {
+    store.dispatch('auth/clearError');
+  }
 }
 
 </script>
@@ -95,7 +81,8 @@ h2 {
 }
 
 .btn-primary {
-  width: 100%; /* Make button full width */
+  width: 100%;
+  /* Make button full width */
   padding-top: 0.75rem;
   padding-bottom: 0.75rem;
   font-size: 1rem;
@@ -107,4 +94,3 @@ p.mt-3 {
   color: var(--secondary);
 }
 </style>
-
