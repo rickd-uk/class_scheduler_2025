@@ -64,16 +64,10 @@ app.use("/api/days-off", authenticateToken, daysOffRoutes); // <-- Mount Days Of
 app.use("/api/exception-patterns", authenticateToken, exceptionPatternsRoutes); // <-- Mount
 app.use("/api/applied-exceptions", authenticateToken, appliedExceptionsRoutes); // <-- Mount
 // Global routes (require login AND admin privileges)
-app.use(
-  "/api/global-days-off",
-  authenticateToken,
-  isAdmin,
-  globalDaysOffRoutes,
-); // <-- Mount Global Days Off
+app.use("/api/global-days-off", authenticateToken, globalDaysOffRoutes); // <-- Mount Global Days Off
 app.use(
   "/api/global-applied-exceptions",
   authenticateToken,
-  isAdmin,
   globalAppliedExceptionsRoutes,
 ); // <-- Mount Global Applied Exceptions
 app.use("/api/global-settings", globalSettingsRoutes);

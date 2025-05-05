@@ -74,7 +74,7 @@
 
 <script setup>
 // --- Imports ---
-import { computed, ref, watch, shallowRef, markRaw } from 'vue'
+import { computed, ref, watch, shallowRef, markRaw, onMounted } from 'vue'
 import { useStore } from 'vuex'
 import { useRouter } from 'vue-router'
 
@@ -139,30 +139,44 @@ watch(activeTab, (newTab) => {
 });
 
 // --- Initial Data Loading ---
-const loadInitialData = () => {
-  if (isAuthenticated.value) {
-    console.log("User authenticated, loading initial data...");
-    // Fetch user-specific data
-    store.dispatch('textbooks/fetchTextbooks');
-    store.dispatch('classes/fetchClasses');
-    store.dispatch('templates/fetchTemplates');
-    store.dispatch('schedule/fetchRegularSchedule');
-    store.dispatch('schedule/fetchAppliedExceptions'); // User exceptions
-    store.dispatch('schoolYear/fetchSchoolYear');
-    store.dispatch('daysOff/fetchDaysOff'); // User days off
-    store.dispatch('exceptionPatterns/fetchPatterns');
-
-    // Fetch global data (needed by DailySchedulePanel and Admin Settings Panel)
-    store.dispatch('globalDaysOff/fetchGlobalDaysOff');
-    store.dispatch('globalAppliedExceptions/fetchGlobalExceptions');
-    store.dispatch('globalSettings/fetchSettings'); // Fetch global toggle settings
-
-    activeComponent.value = componentsMap[activeTab.value] || WeeklySchedulePanel;
-  } else {
-    console.log("User not authenticated.");
-    activeTab.value = 'weekly';
-    activeComponent.value = null;
+const loadInitialData = async () => {
+  if (!isAuthenticated.value) {
+    console.log("User not authenticated.")
+    activeComponent.value = null
+    return
   }
+
+  console.log("User authenticated, loading initial data…")
+
+  // 1️⃣ Fire & forget side-panel data
+  //    (textbooks, classes, templates, schoolYear, daysOff, exceptionPatterns)
+  Promise.all([
+    store.dispatch('textbooks/fetchTextbooks'),
+    store.dispatch('classes/fetchClasses'),
+    store.dispatch('templates/fetchTemplates'),
+    store.dispatch('schoolYear/fetchSchoolYear'),
+    store.dispatch('daysOff/fetchDaysOff'),
+    store.dispatch('exceptionPatterns/fetchPatterns'),
+  ]).catch(err => {
+    console.warn("One of the sidebar panels failed to load:", err)
+  })
+
+  // 2️⃣ Await the *critical* schedule & global settings data
+  try {
+    await Promise.all([
+      store.dispatch('schedule/fetchRegularSchedule'),
+      store.dispatch('schedule/fetchAppliedExceptions'),
+      store.dispatch('globalDaysOff/fetchGlobalDaysOff'),
+      store.dispatch('globalAppliedExceptions/fetchGlobalExceptions'),
+      store.dispatch('globalSettings/fetchSettings'),
+    ])
+  } catch (err) {
+    console.error("Failed to fetch schedule or global settings:", err)
+    // you could show a notification here, or bail out…
+  }
+
+  // 3️⃣ Now that everything’s in place, mount the schedule component
+  activeComponent.value = componentsMap[activeTab.value] || WeeklySchedulePanel
 }
 
 // --- Watch Authentication Status ---
@@ -174,8 +188,15 @@ watch(isAuthenticated, (newValue, oldValue) => {
     activeComponent.value = null;
     showLogin.value = true;
     // Optionally reset stores on logout
+
   }
 }, { immediate: true });
+
+onMounted(() => {
+  if (isAuthenticated.value) {
+    loadInitialData()
+  }
+})
 
 // --- Logout Handler ---
 const handleLogout = async () => {
@@ -186,6 +207,10 @@ const handleLogout = async () => {
     console.error('Logout failed:', error);
   }
 }
+
+onMounted(() => {
+  if (isAuthenticated.value) loadInitialData()
+})
 </script>
 
 <style scoped>

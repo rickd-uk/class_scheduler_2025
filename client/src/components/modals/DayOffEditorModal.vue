@@ -135,6 +135,7 @@ const handleSubmit = async () => {
           color: editableData.color
         }
       });
+      console.log("▶️ Adding/Updating DayOff with date:", editableData.date);
       nextTick(closeModal); // Close after successful update
     } else {
       // --- Add New Day Off ---

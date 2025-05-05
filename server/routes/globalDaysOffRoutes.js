@@ -1,11 +1,14 @@
 // server/routes/globalDaysOffRoutes.js
 const express = require("express");
+const authenticateToken = require("../middleware/authenticateToken");
+const isAdmin = require("../middleware/isAdmin");
+
 const { GlobalDayOff } = require("../models");
 const router = express.Router();
 // Note: authenticateToken and isAdmin middleware should be applied in server.js
 
 // GET all global days off
-router.get("/", async (req, res) => {
+router.get("/", authenticateToken, async (req, res) => {
   try {
     const daysOff = await GlobalDayOff.findAll({ order: [["date", "ASC"]] });
     res.status(200).json(daysOff);
@@ -18,7 +21,7 @@ router.get("/", async (req, res) => {
 });
 
 // POST a new global day off
-router.post("/", async (req, res) => {
+router.post("/", authenticateToken, isAdmin, async (req, res) => {
   const { date, reason, color } = req.body;
   if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
     return res
@@ -48,7 +51,7 @@ router.post("/", async (req, res) => {
 });
 
 // PUT (update) a global day off
-router.put("/:date", async (req, res) => {
+router.put("/:date", authenticateToken, isAdmin, async (req, res) => {
   const { date } = req.params;
   const { reason, color } = req.body;
   if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
@@ -74,7 +77,7 @@ router.put("/:date", async (req, res) => {
 });
 
 // DELETE a global day off
-router.delete("/:date", async (req, res) => {
+router.delete("/:date", authenticateToken, isAdmin, async (req, res) => {
   const { date } = req.params;
   if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
     return res.status(400).json({ message: "Valid date parameter required." });

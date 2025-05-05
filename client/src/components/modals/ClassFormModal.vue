@@ -91,6 +91,17 @@ import { useStore } from 'vuex';
 
 const store = useStore();
 const modalName = 'classFormModal'; // Unique name for this modal
+// Reset the entire form to its initial state (for Add mode)
+const resetForm = () => {
+  formData.id = null;
+  formData.classType = 'numbered';
+  formData.classNumber = '';
+  formData.yearLevel = '';
+  formData.className = '';
+  formData.color = '#FFFFFF'; // Reset color to default
+  formError.value = null;
+  console.log("Class form reset.");
+};
 
 // --- State ---
 const isLoading = ref(false); // Loading state for Add/Update operations
@@ -142,17 +153,6 @@ const resetConditionalFields = () => {
   formError.value = null; // Clear errors on type change
 };
 
-// Reset the entire form to its initial state (for Add mode)
-const resetForm = () => {
-  formData.id = null;
-  formData.classType = 'numbered';
-  formData.classNumber = '';
-  formData.yearLevel = '';
-  formData.className = '';
-  formData.color = '#FFFFFF'; // Reset color to default
-  formError.value = null;
-  console.log("Class form reset.");
-};
 
 // Close the modal by dispatching action to UI store
 const closeModal = () => {

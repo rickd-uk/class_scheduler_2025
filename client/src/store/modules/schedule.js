@@ -1,212 +1,249 @@
-// Import the actual services
-import ScheduleService from '../../services/ScheduleService';
-import AppliedExceptionsService from '../../services/AppliedExceptionsService'; // <-- Import AppliedExceptionsService
+// client/src/store/modules/schedule.js
 
-// --- Add Log 1 ---
-console.log("--- Executing schedule.js store module ---");
+import ScheduleService from "../../services/ScheduleService";
+import AppliedExceptionsService from "../../services/AppliedExceptionsService";
 
 export default {
   namespaced: true,
 
   state: () => ({
-    regularSchedule: {}, // Object: { monday: [{classId: id}, null], ... }
-    // This state property will hold applied exceptions fetched from the backend
-    dailyExceptions: [], // Array: [{ id, userId, date, exceptionPatternId?, isDayOff, reason?, color?, ExceptionPattern? }]
-    isLoading: false, // Loading state specific to this module
-    error: null, // Error state specific to this module
+    regularSchedule: {},
+    dailyExceptions: [],
+    isLoading: false,
+    error: null,
   }),
 
-  mutations: {
-    SET_REGULAR_SCHEDULE(state, schedule) {
-      // Ensure structure is correct when setting
-      const formattedSchedule = {};
-      const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
-      const periods = 6; // Assuming 6 periods per day
-
-      days.forEach(day => {
-          // Initialize day with an array of nulls
-          formattedSchedule[day] = Array(periods).fill(null);
-          // Use the schedule passed to the mutation (could be empty object {} or null)
-          const scheduleForDay = schedule ? schedule[day] : null;
-          if (scheduleForDay && Array.isArray(scheduleForDay)) {
-              for (let i = 0; i < Math.min(scheduleForDay.length, periods); i++) {
-                  // Assign the item (which could be {classId: id} or null)
-                  formattedSchedule[day][i] = scheduleForDay[i];
-              }
-          }
-      });
-      state.regularSchedule = formattedSchedule;
-      console.log("[Mutation SET_REGULAR_SCHEDULE] State updated:", JSON.parse(JSON.stringify(state.regularSchedule)));
-    },
-    // Renamed from SET_DAILY_EXCEPTIONS to SET_APPLIED_EXCEPTIONS for clarity
-    SET_APPLIED_EXCEPTIONS(state, exceptions) {
-      state.dailyExceptions = exceptions.sort((a, b) => a.date.localeCompare(b.date)); // Keep sorted
-      console.log("[Mutation SET_APPLIED_EXCEPTIONS] State updated:", JSON.parse(JSON.stringify(state.dailyExceptions)));
-    },
-    // Mutation to add or update a single applied exception in the state
-    SET_APPLIED_EXCEPTION(state, appliedException) {
-        const index = state.dailyExceptions.findIndex(ex => ex.date === appliedException.date);
-        if (index !== -1) {
-            // Replace existing entry
-            state.dailyExceptions.splice(index, 1, appliedException);
-        } else {
-            // Add new entry and re-sort
-            state.dailyExceptions.push(appliedException);
-            state.dailyExceptions.sort((a, b) => a.date.localeCompare(b.date));
-        }
-         console.log("[Mutation SET_APPLIED_EXCEPTION] State updated:", JSON.parse(JSON.stringify(state.dailyExceptions)));
-    },
-    // Mutation to remove an applied exception for a specific date
-    CLEAR_APPLIED_EXCEPTION(state, date) {
-         state.dailyExceptions = state.dailyExceptions.filter(ex => ex.date !== date);
-         console.log(`[Mutation CLEAR_APPLIED_EXCEPTION] Exception for ${date} removed. State:`, JSON.parse(JSON.stringify(state.dailyExceptions)));
-    },
-    // Removed ADD_EXCEPTION, UPDATE_EXCEPTION, REMOVE_EXCEPTION as they are replaced by SET_APPLIED_EXCEPTION and CLEAR_APPLIED_EXCEPTION
-
-    SET_LOADING(state, isLoading) { state.isLoading = isLoading; },
-    SET_ERROR(state, error) { state.error = error; state.isLoading = false; },
-    RESET_STATE(state) {
-        state.regularSchedule = {};
-        state.dailyExceptions = [];
-        state.isLoading = false;
-        state.error = null;
-     }
-  },
-
-  actions: { // <-- Check this object
-    // --- Removed the invalid _logDefinition ---
-
-    async fetchRegularSchedule({ commit, state }) {
-      // Avoid refetch if already loading
-      if (state.isLoading) {
-          console.log("[Action fetchRegularSchedule] Already loading, skipping fetch.");
-          return;
-      }
-      commit('SET_LOADING', true);
-      commit('SET_ERROR', null);
-      try {
-        // --- Use the actual API Service ---
-        console.log("[Action fetchRegularSchedule] Calling ScheduleService.getRegular...");
-        const response = await ScheduleService.getRegular();
-        // The backend returns the schedule object or {} if none exists
-        // Pass the received data (or an empty object) to the mutation
-        commit('SET_REGULAR_SCHEDULE', response.data || {});
-        console.log('[Action fetchRegularSchedule] Successfully fetched schedule from API:', response.data);
-        // --- End API Call ---
-
-      } catch (error) {
-        const message = error.response?.data?.message || error.message || 'Failed to fetch regular schedule';
-        commit('SET_ERROR', message);
-        console.error('Error fetching regular schedule:', message);
-        // Also set schedule to empty on error to avoid showing stale data
-        commit('SET_REGULAR_SCHEDULE', {});
-      } finally {
-        commit('SET_LOADING', false);
-      }
-    },
-    // --- Renamed and updated action ---
-     async fetchAppliedExceptions({ commit, state }) {
-         // Prevent multiple concurrent fetches
-         if (state.isLoading) return;
-         commit('SET_LOADING', true);
-         commit('SET_ERROR', null);
-         try {
-            console.log("[Action fetchAppliedExceptions] Calling AppliedExceptionsService.getAll...");
-            // --- Use the actual API Service ---
-            // TODO: Ensure AppliedExceptionsService.getAll() exists and works
-            const response = await AppliedExceptionsService.getAll(); // Call the service
-            commit('SET_APPLIED_EXCEPTIONS', response.data); // Use the correct mutation
-            console.log('[Action fetchAppliedExceptions] Successfully fetched exceptions:', response.data);
-            // --- End API Call ---
-         } catch (error) {
-             const message = error.response?.data?.message || error.message || 'Failed to fetch applied exceptions';
-            commit('SET_ERROR', message);
-            console.error('Error fetching applied exceptions:', message);
-            commit('SET_APPLIED_EXCEPTIONS', []); // Clear exceptions on error
-         } finally {
-             commit('SET_LOADING', false);
-         }
-     },
-     // --- End Renamed Action ---
-
-     // --- Action to save the updated schedule ---
-     async updateRegularSchedule({ commit, dispatch }, newScheduleData) {
-         console.log("[Action schedule/updateRegularSchedule] Action started.");
-         commit('SET_LOADING', true);
-         commit('SET_ERROR', null);
-         try {
-             const response = await ScheduleService.updateRegular(newScheduleData);
-             commit('SET_REGULAR_SCHEDULE', response.data);
-             console.log("Updated regular schedule via API");
-             dispatch('ui/showNotification', { type: 'success', message: 'Schedule updated successfully!' }, { root: true });
-             return response.data; // Return data
-         } catch(error) {
-            const message = error.response?.data?.message || error.message || 'Failed to update schedule';
-            commit('SET_ERROR', message);
-            console.error('Error updating regular schedule:', message);
-            dispatch('ui/showNotification', { type: 'error', message }, { root: true });
-            throw new Error(message);
-         } finally {
-             commit('SET_LOADING', false);
-         }
-     },
-
-     // --- Action to apply/update an exception for a date ---
-     async applyException({ commit, dispatch }, exceptionData) {
-         // exceptionData: { date, isDayOff, exceptionPatternId, reason, color }
-         // No need for SET_LOADING here as modal handles its own loading state
-         commit('SET_ERROR', null); // Clear specific errors for this action
-         try {
-             console.log("[Action applyException] Dispatching applyException:", exceptionData);
-             // Call the service to POST the data (backend handles create/update)
-             const response = await AppliedExceptionsService.apply(exceptionData);
-             // Update the local state with the result from the backend
-             // Backend should return the full AppliedException object, potentially including the joined ExceptionPattern data
-             commit('SET_APPLIED_EXCEPTION', response.data);
-             dispatch('ui/showNotification', { type: 'success', message: 'Exception applied successfully!' }, { root: true });
-             return response.data;
-         } catch (error) {
-             const message = error.response?.data?.message || error.message || 'Failed to apply exception';
-             console.error('Error applying exception:', message);
-             dispatch('ui/showNotification', { type: 'error', message }, { root: true });
-             throw new Error(message); // Re-throw for component handling
-         }
-     },
-
-     // --- Action to clear an applied exception for a date ---
-      async clearAppliedException({ commit, dispatch }, date) {
-         commit('SET_ERROR', null);
-         try {
-             console.log("[Action clearAppliedException] Dispatching clearAppliedException for date:", date);
-             await AppliedExceptionsService.clear(date); // Call DELETE endpoint
-             commit('CLEAR_APPLIED_EXCEPTION', date); // Remove from local state
-             dispatch('ui/showNotification', { type: 'success', message: 'Exception cleared successfully.' }, { root: true });
-         } catch (error) {
-             const message = error.response?.data?.message || error.message || 'Failed to clear exception';
-             console.error('Error clearing exception:', message);
-             dispatch('ui/showNotification', { type: 'error', message }, { root: true });
-             throw new Error(message);
-         }
-     }
-    // Add actions for saveException, deleteException later (old names)
-  },
-
   getters: {
-    regularSchedule: state => state.regularSchedule,
-    // Rename getter to match state/action
-    appliedExceptions: state => state.dailyExceptions, // Keep state name dailyExceptions for now
-    isLoading: state => state.isLoading,
-    error: state => state.error,
+    // raw data
+    regularSchedule: (state) => state.regularSchedule,
+    appliedExceptions: (state) => state.dailyExceptions,
+    isLoading: (state) => state.isLoading,
+    error: (state) => state.error,
+
+    // fill out to exactly 6 periods
     getScheduleForDay: (state) => (dayOfWeek) => {
-        const day = dayOfWeek.toLowerCase();
-        const schedule = state.regularSchedule[day] || [];
-        return [...schedule, ...Array(Math.max(0, 6 - schedule.length)).fill(null)].slice(0, 6);
-     },
-    // Rename getter to match state/action
+      const day = dayOfWeek.toLowerCase();
+      const schedule = state.regularSchedule[day] || [];
+      return [
+        ...schedule,
+        ...Array(Math.max(0, 6 - schedule.length)).fill(null),
+      ].slice(0, 6);
+    },
+
+    // single‐date exception
     getAppliedExceptionForDate: (state) => (dateString) => {
-        // Use dailyExceptions state name here
-        return state.dailyExceptions.find(e => e.date === dateString);
-    }
+      return state.dailyExceptions.find((e) => e.date === dateString);
+    },
+
+    // --- NEW merged schedule getter ---
+    mergedSchedule: (state, _getters, rootState) => {
+      // 1) deep‐clone the base weekday‐keyed schedule
+      const schedule = JSON.parse(JSON.stringify(state.regularSchedule));
+
+      // 2) grab global days‐off & exceptions safely
+      const globalDaysOff = rootState.globalDaysOff?.globalDaysOff || [];
+      const globalExceptions =
+        rootState.globalAppliedExceptions?.exceptions || [];
+
+      // 3) grab the toggles (default false if missing)
+      const applyGlobalDaysOff =
+        rootState.globalSettings?.applyGlobalDaysOff || false;
+      const applyGlobalExceptions =
+        rootState.globalSettings?.applyGlobalExceptions || false;
+
+      // 4) helper to map a YYYY-MM-DD to a weekday key
+      const dateToWeekday = (ds) => {
+        // midday ensures no timezone shift pushes you into the previous day
+        const d = new Date(ds + "T12:00:00");
+        return d.toLocaleDateString("en-US", { weekday: "long" }).toLowerCase();
+      };
+
+      // 5) apply global days off (wipe out entire day)
+      if (applyGlobalDaysOff) {
+        globalDaysOff.forEach(({ date }) => {
+          const wd = dateToWeekday(date);
+          if (schedule[wd]) {
+            schedule[wd] = [];
+          }
+        });
+      }
+
+      // 6) apply global exceptions (push exception items)
+      if (applyGlobalExceptions) {
+        globalExceptions.forEach((exc) => {
+          const wd = dateToWeekday(exc.date);
+          if (schedule[wd]) {
+            schedule[wd].push(exc);
+          }
+        });
+      }
+
+      // 7) apply user‐specific exceptions last
+      state.dailyExceptions.forEach((exc) => {
+        const wd = dateToWeekday(exc.date);
+        if (schedule[wd]) {
+          schedule[wd].push(exc);
+        }
+      });
+
+      return schedule;
+    },
+  },
+
+  mutations: {
+    SET_REGULAR_SCHEDULE(state, raw) {
+      const formatted = {};
+      const days = [
+        "monday",
+        "tuesday",
+        "wednesday",
+        "thursday",
+        "friday",
+        "saturday",
+      ];
+      const periods = 6;
+      days.forEach((day) => {
+        formatted[day] = Array(periods).fill(null);
+        const arr = raw?.[day];
+        if (Array.isArray(arr)) {
+          for (let i = 0; i < Math.min(periods, arr.length); i++) {
+            formatted[day][i] = arr[i];
+          }
+        }
+      });
+      state.regularSchedule = formatted;
+    },
+    SET_APPLIED_EXCEPTIONS(state, exceptions) {
+      state.dailyExceptions = exceptions
+        .slice()
+        .sort((a, b) => a.date.localeCompare(b.date));
+    },
+    SET_APPLIED_EXCEPTION(state, one) {
+      const idx = state.dailyExceptions.findIndex((e) => e.date === one.date);
+      if (idx >= 0) state.dailyExceptions.splice(idx, 1, one);
+      else {
+        state.dailyExceptions.push(one);
+        state.dailyExceptions.sort((a, b) => a.date.localeCompare(b.date));
+      }
+    },
+    CLEAR_APPLIED_EXCEPTION(state, date) {
+      state.dailyExceptions = state.dailyExceptions.filter(
+        (e) => e.date !== date,
+      );
+    },
+    SET_LOADING(state, val) {
+      state.isLoading = val;
+    },
+    SET_ERROR(state, err) {
+      state.error = err;
+      state.isLoading = false;
+    },
+    RESET_STATE(state) {
+      state.regularSchedule = {};
+      state.dailyExceptions = [];
+      state.isLoading = false;
+      state.error = null;
+    },
+  },
+
+  actions: {
+    async fetchRegularSchedule({ commit, state }) {
+      if (state.isLoading) return;
+      commit("SET_LOADING", true);
+      commit("SET_ERROR", null);
+      try {
+        const { data } = await ScheduleService.getRegular();
+        commit("SET_REGULAR_SCHEDULE", data || {});
+      } catch (err) {
+        commit("SET_ERROR", err.response?.data?.message || err.message);
+        commit("SET_REGULAR_SCHEDULE", {});
+      } finally {
+        commit("SET_LOADING", false);
+      }
+    },
+
+    async fetchAppliedExceptions({ commit, state }) {
+      if (state.isLoading) return;
+      commit("SET_LOADING", true);
+      commit("SET_ERROR", null);
+      try {
+        const { data } = await AppliedExceptionsService.getAll();
+        commit("SET_APPLIED_EXCEPTIONS", data);
+      } catch (err) {
+        commit("SET_ERROR", err.response?.data?.message || err.message);
+        commit("SET_APPLIED_EXCEPTIONS", []);
+      } finally {
+        commit("SET_LOADING", false);
+      }
+    },
+
+    async updateRegularSchedule({ commit, dispatch }, newSched) {
+      commit("SET_LOADING", true);
+      commit("SET_ERROR", null);
+      try {
+        const { data } = await ScheduleService.updateRegular(newSched);
+        commit("SET_REGULAR_SCHEDULE", data);
+        dispatch(
+          "ui/showNotification",
+          { type: "success", message: "Schedule updated." },
+          { root: true },
+        );
+        return data;
+      } catch (err) {
+        const msg = err.response?.data?.message || err.message;
+        commit("SET_ERROR", msg);
+        dispatch(
+          "ui/showNotification",
+          { type: "error", message: msg },
+          { root: true },
+        );
+        throw new Error(msg);
+      } finally {
+        commit("SET_LOADING", false);
+      }
+    },
+
+    async applyException({ commit, dispatch }, payload) {
+      commit("SET_ERROR", null);
+      try {
+        const { data } = await AppliedExceptionsService.apply(payload);
+        commit("SET_APPLIED_EXCEPTION", data);
+        dispatch(
+          "ui/showNotification",
+          { type: "success", message: "Exception applied." },
+          { root: true },
+        );
+        return data;
+      } catch (err) {
+        const msg = err.response?.data?.message || err.message;
+        dispatch(
+          "ui/showNotification",
+          { type: "error", message: msg },
+          { root: true },
+        );
+        throw new Error(msg);
+      }
+    },
+
+    async clearAppliedException({ commit, dispatch }, date) {
+      commit("SET_ERROR", null);
+      try {
+        await AppliedExceptionsService.clear(date);
+        commit("CLEAR_APPLIED_EXCEPTION", date);
+        dispatch(
+          "ui/showNotification",
+          { type: "success", message: "Exception cleared." },
+          { root: true },
+        );
+      } catch (err) {
+        const msg = err.response?.data?.message || err.message;
+        dispatch(
+          "ui/showNotification",
+          { type: "error", message: msg },
+          { root: true },
+        );
+        throw new Error(msg);
+      }
+    },
   },
 };
-
