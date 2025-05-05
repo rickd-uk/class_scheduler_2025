@@ -36,7 +36,7 @@
                 Weekly Schedule
               </button>
               <button @click="activeTab = 'daily'" :class="['tab-btn', { active: activeTab === 'daily' }]">
-                Daily Schedule
+                Daily
               </button>
             </div>
             <div class="schedule-view">
@@ -117,7 +117,7 @@ watch(() => store.state.ui.modals.classFormModal, (newValue, oldValue) => { cons
 
 
 // --- Component State ---
-const activeTab = ref('weekly');
+const activeTab = ref('daily');
 const showLogin = ref(true);
 
 // --- Computed Properties ---
@@ -146,7 +146,7 @@ const loadInitialData = async () => {
     return
   }
 
-  console.log("User authenticated, loading initial data…")
+  // console.log("User authenticated, loading initial data…")
 
   // 1️⃣ Fire & forget side-panel data
   //    (textbooks, classes, templates, schoolYear, daysOff, exceptionPatterns)

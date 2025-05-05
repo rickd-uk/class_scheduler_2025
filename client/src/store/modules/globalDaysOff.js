@@ -10,7 +10,20 @@ export default {
   mutations: {
     SET_GLOBAL_DAYS_OFF(state, daysOff) {
       state.globalDaysOff = daysOff
-        .map((d) => ({ ...d, color: d.color || "#E0E0E0" })) // Default grey
+        .map((d) => {
+          // d.date might be "2025-05-20T00:00:00.000Z"
+          const raw = d.date;
+          const dateOnly =
+            typeof raw === "string" && raw.length >= 10
+              ? raw.slice(0, 10)
+              : new Date(raw).toISOString().split("T")[0];
+          return {
+            id: d.id,
+            date: dateOnly,
+            reason: d.reason,
+            color: d.color || "#E0E0E0",
+          };
+        })
         .sort((a, b) => a.date.localeCompare(b.date));
     },
     ADD_GLOBAL_DAY_OFF(state, dayOff) {

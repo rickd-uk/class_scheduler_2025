@@ -27,14 +27,7 @@
           <p v-if="updateError" class="error-message small-error mt-2">{{ updateError }}</p>
         </div>
 
-        <div class="management-buttons">
-          <button class="btn btn-sm btn-outline-secondary" @click="manageGlobalDaysOff">
-            Manage Global Days Off
-          </button>
-          <button class="btn btn-sm btn-outline-secondary" @click="manageGlobalExceptions">
-            Manage Global Exceptions
-          </button>
-        </div>
+
 
       </div>
       <small class="text-muted mt-2 d-block px-3 pb-2">

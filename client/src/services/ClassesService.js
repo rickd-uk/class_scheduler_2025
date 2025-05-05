@@ -13,7 +13,7 @@ const ClassesService = {
    * @returns {Promise<AxiosResponse<any>>} Promise resolving with API response.
    */
   getAll() {
-    console.log(`ClassesService: Fetching classes from ${CLASSES_ENDPOINT}`);
+    /* console.log(`ClassesService: Fetching classes from ${CLASSES_ENDPOINT}`);  */
     return ApiService.get(CLASSES_ENDPOINT);
   },
 
@@ -29,7 +29,7 @@ const ClassesService = {
 
   update(id, classData) {
     const url = `${CLASSES_ENDPOINT}/${id}`;
-    console.log(`ClassesService: Updating class ID ${id} via PUT ${url}`);
+    //console.log(`ClassesService: Updating class ID ${id} via PUT ${url}`);
     // Uses the generic ApiService PUT method
     return ApiService.put(url, classData);
   },
