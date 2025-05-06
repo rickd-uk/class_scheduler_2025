@@ -69,7 +69,7 @@ app.use(
   "/api/global-applied-exceptions",
   authenticateToken,
   globalAppliedExceptionsRoutes,
-); // <-- Mount Global Applied Exceptions
+);
 app.use("/api/global-settings", globalSettingsRoutes);
 
 // --- Error Handling Middleware (Should be last) ---

@@ -30,37 +30,36 @@ export default {
       ].slice(0, 6);
     },
 
-    // single‐date exception
+    // single-date exception
     getAppliedExceptionForDate: (state) => (dateString) => {
       return state.dailyExceptions.find((e) => e.date === dateString);
     },
 
-    // --- NEW merged schedule getter ---
-    mergedSchedule: (state, _getters, rootState) => {
-      // 1) deep‐clone the base weekday‐keyed schedule
+    // merged schedule with global days-off and global exceptions
+    mergedSchedule: (state, _getters, rootState, rootGetters) => {
+      // 1) deep-clone the base weekday-keyed schedule
       const schedule = JSON.parse(JSON.stringify(state.regularSchedule));
 
-      // 2) grab global days‐off & exceptions safely
-      const globalDaysOff = rootState.globalDaysOff?.globalDaysOff || [];
-      const globalExceptions =
-        rootState.globalAppliedExceptions?.exceptions || [];
-
-      // 3) grab the toggles (default false if missing)
+      // 2) pull in the toggles
       const applyGlobalDaysOff =
-        rootState.globalSettings?.applyGlobalDaysOff || false;
+        rootGetters["globalSettings/shouldApplyGlobalDaysOff"];
       const applyGlobalExceptions =
-        rootState.globalSettings?.applyGlobalExceptions || false;
+        rootGetters["globalSettings/shouldApplyGlobalExceptions"];
+
+      // 3) pull in the global lists
+      const globalDaysOffList = rootGetters["globalDaysOff/allGlobalDaysOff"];
+      const globalExceptionsList =
+        rootGetters["globalAppliedExceptions/allGlobalExceptions"];
 
       // 4) helper to map a YYYY-MM-DD to a weekday key
       const dateToWeekday = (ds) => {
-        // midday ensures no timezone shift pushes you into the previous day
-        const d = new Date(ds + "T12:00:00");
+        const d = new Date(ds + "T12:00:00"); // midday avoids timezone shifts
         return d.toLocaleDateString("en-US", { weekday: "long" }).toLowerCase();
       };
 
       // 5) apply global days off (wipe out entire day)
       if (applyGlobalDaysOff) {
-        globalDaysOff.forEach(({ date }) => {
+        globalDaysOffList.forEach(({ date }) => {
           const wd = dateToWeekday(date);
           if (schedule[wd]) {
             schedule[wd] = [];
@@ -70,7 +69,7 @@ export default {
 
       // 6) apply global exceptions (push exception items)
       if (applyGlobalExceptions) {
-        globalExceptions.forEach((exc) => {
+        globalExceptionsList.forEach((exc) => {
           const wd = dateToWeekday(exc.date);
           if (schedule[wd]) {
             schedule[wd].push(exc);
@@ -78,7 +77,7 @@ export default {
         });
       }
 
-      // 7) apply user‐specific exceptions last
+      // 7) apply user-specific exceptions last
       state.dailyExceptions.forEach((exc) => {
         const wd = dateToWeekday(exc.date);
         if (schedule[wd]) {
@@ -113,31 +112,38 @@ export default {
       });
       state.regularSchedule = formatted;
     },
+
     SET_APPLIED_EXCEPTIONS(state, exceptions) {
       state.dailyExceptions = exceptions
         .slice()
         .sort((a, b) => a.date.localeCompare(b.date));
     },
+
     SET_APPLIED_EXCEPTION(state, one) {
       const idx = state.dailyExceptions.findIndex((e) => e.date === one.date);
-      if (idx >= 0) state.dailyExceptions.splice(idx, 1, one);
-      else {
+      if (idx >= 0) {
+        state.dailyExceptions.splice(idx, 1, one);
+      } else {
         state.dailyExceptions.push(one);
         state.dailyExceptions.sort((a, b) => a.date.localeCompare(b.date));
       }
     },
+
     CLEAR_APPLIED_EXCEPTION(state, date) {
       state.dailyExceptions = state.dailyExceptions.filter(
         (e) => e.date !== date,
       );
     },
+
     SET_LOADING(state, val) {
       state.isLoading = val;
     },
+
     SET_ERROR(state, err) {
       state.error = err;
       state.isLoading = false;
     },
+
     RESET_STATE(state) {
       state.regularSchedule = {};
       state.dailyExceptions = [];
