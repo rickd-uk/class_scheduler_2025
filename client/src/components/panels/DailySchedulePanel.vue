@@ -65,24 +65,22 @@ import { useStore } from 'vuex';
 
 const store = useStore();
 
-// --- Helper Functions ---
+// Helpers for dates
 const toYYYYMMDD = date => {
   const offset = date.getTimezoneOffset() * 60000;
   return new Date(date.getTime() - offset).toISOString().split('T')[0];
 };
 const getTodayDateString = () => toYYYYMMDD(new Date());
-const getDayOfWeek = ds => {
-  const [y, m, d] = ds.split('-').map(Number);
-  return ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][
-    new Date(y, m - 1, d).getDay()
-  ];
-};
 const formatDate = ds => {
   if (!ds.match(/^\d{4}-\d{2}-\d{2}$/)) return 'Invalid Date';
   const [y, m, d] = ds.split('-').map(Number);
   return new Date(y, m - 1, d).toLocaleDateString(undefined, {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
   });
+};
+const dateToWeekday = ds => {
+  const d = new Date(ds + 'T12:00:00');
+  return d.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
 };
 const periodTimes = ['09:00', '10:00', '11:00', '13:00', '14:00', '15:00'];
 const isDarkColor = hex => {
@@ -91,22 +89,22 @@ const isDarkColor = hex => {
   return (0.299 * r + 0.587 * g + 0.114 * b) / 255 < 0.5;
 };
 
-// --- Reactive State ---
+// Reactive state
 const selectedDate = ref(getTodayDateString());
 const isLoading = ref(false);
 const error = ref(null);
 const showDatePicker = ref(false);
 const datePickerInput = ref(null);
 
-// --- Vuex getters / state ---
-const mergedSchedule = computed(() => store.getters['schedule/mergedSchedule']);
+// Vuex getters
+const getScheduleForDay = day => store.getters['schedule/getScheduleForDay'](day);
 const personalDaysOff = computed(() => store.getters['daysOff/allDaysOff']);
 const personalExceptions = computed(() => store.getters['schedule/appliedExceptions']);
 const classesList = computed(() => store.getters['classes/allClasses']);
 const globalDaysOff = computed(() => store.getters['globalDaysOff/allGlobalDaysOff']);
 const applyGlobalDaysOff = computed(() => store.getters['globalSettings/shouldApplyGlobalDaysOff']);
 
-// --- Computed props ---
+// Computed for date display
 const formattedDate = computed(() => formatDate(selectedDate.value));
 const relativeDateString = computed(() => {
   const today = getTodayDateString();
@@ -117,39 +115,31 @@ const relativeDateString = computed(() => {
   return '';
 });
 
-// 1) check globalDaysOff  2) personalDaysOff
+// Day off logic
 const isDayOff = computed(() => {
-  if (
-    applyGlobalDaysOff.value &&
-    globalDaysOff.value.some(d => d.date === selectedDate.value)
-  ) return true;
+  if (applyGlobalDaysOff.value && globalDaysOff.value.some(d => d.date === selectedDate.value)) return true;
   return personalDaysOff.value.some(d => d.date === selectedDate.value);
 });
-
 const dayOffColor = computed(() => {
-  if (applyGlobalDaysOff.value) {
-    const g = globalDaysOff.value.find(d => d.date === selectedDate.value);
-    if (g) return g.color;
-  }
+  const g = applyGlobalDaysOff.value && globalDaysOff.value.find(d => d.date === selectedDate.value);
+  if (g) return g.color;
   const p = personalDaysOff.value.find(d => d.date === selectedDate.value);
   return p?.color || '#F0F0F0';
 });
 const dayOffReason = computed(() => {
-  if (applyGlobalDaysOff.value) {
-    const g = globalDaysOff.value.find(d => d.date === selectedDate.value);
-    if (g) return g.reason || 'Day Off';
-  }
+  const g = applyGlobalDaysOff.value && globalDaysOff.value.find(d => d.date === selectedDate.value);
+  if (g) return g.reason || 'Day Off';
   const p = personalDaysOff.value.find(d => d.date === selectedDate.value);
   return p?.reason || 'Day Off';
 });
 
-// Build out the daily schedule from mergedSchedule
+// Build dailySchedule
 const dailySchedule = computed(() => {
-  const wd = getDayOfWeek(selectedDate.value);
-  const slots = mergedSchedule.value[wd] || [];
+  const wd = dateToWeekday(selectedDate.value);
+  const slots = getScheduleForDay(wd);
   return slots.map((slot, idx) => {
     if (!slot || !slot.classId) return null;
-    const cls = classesList.value.find(c => c.id == slot.classId);
+    const cls = classesList.value.find(c => c.id === slot.classId);
     const className = cls
       ? cls.classType === 'numbered'
         ? `${(cls.yearLevel <= 3 ? cls.yearLevel : cls.yearLevel - 3)}${(cls.yearLevel <= 3 ? 'J' : 'H')}-${cls.classNumber}`
@@ -165,7 +155,7 @@ const dailySchedule = computed(() => {
   }).filter(x => x);
 });
 
-// --- Navigation & modal ---
+// Navigation
 const changeDay = n => { const d = new Date(selectedDate.value); d.setDate(d.getDate() + n); selectedDate.value = toYYYYMMDD(d); };
 const changeMonth = n => { const d = new Date(selectedDate.value); d.setDate(1); d.setMonth(d.getMonth() + n); selectedDate.value = toYYYYMMDD(d); };
 const goToPreviousDay = () => changeDay(-1);
@@ -173,40 +163,19 @@ const goToNextDay = () => changeDay(1);
 const goToPreviousMonth = () => changeMonth(-1);
 const goToNextMonth = () => changeMonth(1);
 
+// Open exception modal
 const openExceptionModal = () => {
   store.dispatch('ui/openModal', {
     modalName: 'dailyException',
-    data: {
-      date: selectedDate.value,
-      exception: personalExceptions.value.find(e => e.date === selectedDate.value) || null
-    }
+    data: { date: selectedDate.value, exception: personalExceptions.value.find(e => e.date === selectedDate.value) || null }
   });
 };
 
-// Hide date picker dropdown on pick
-const onDatePicked = () => {
-  showDatePicker.value = false;
-};
-
-// dummy loader (all data comes from store)
-function loadSchedule() {
-  isLoading.value = true;
-  error.value = null;
-  isLoading.value = false;
-}
-
-onMounted(loadSchedule);
-watch(selectedDate, loadSchedule);
-watch(showDatePicker, async val => {
-  if (val) {
-    await nextTick();
-    datePickerInput.value?.focus();
-    try { datePickerInput.value.showPicker() } catch { }
-  }
-});
+// DatePicker focus
+const onDatePicked = () => showDatePicker.value = false;
+onMounted(() => {/* no actual load needed */ });
+watch(showDatePicker, async val => { if (val) { await nextTick(); datePickerInput.value?.focus(); try { datePickerInput.value.showPicker() } catch { } } });
 </script>
-
-
 
 <style scoped>
 /* Styles for the panel */

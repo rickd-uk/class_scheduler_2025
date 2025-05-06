@@ -119,6 +119,7 @@ export default {
           }
         }
       });
+      console.log("🕵️‍♂️ [mutation] formatted regularSchedule:", formatted);
       state.regularSchedule = formatted;
     },
 

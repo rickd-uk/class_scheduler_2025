@@ -11,7 +11,7 @@
       Loading schedule...
     </div>
     <div v-else-if="scheduleError || classesError" class="error-message">
-      {{ scheduleError || classesError || 'Error loading data.' }}
+      {{ scheduleError || classesError }}
     </div>
 
     <div v-else-if="hasScheduleData" class="schedule-table-container">
@@ -24,20 +24,10 @@
         </thead>
         <tbody>
           <tr v-for="period in periods" :key="period">
-            <td>{{ period }}</td>
-            <td v-for="day in daysOfWeek" :key="`${day}-${period}`"
-              :style="{ backgroundColor: getClassColor(day, period) || 'transparent' }">
+            <td class="period-cell">{{ period }}</td>
+            <td v-for="day in daysOfWeek" :key="`${day}-${period}`" :style="{ backgroundColor: getColor(day, period) }">
               <div v-if="getClassForPeriod(day, period)" class="schedule-item">
-                <span v-if="getClassForPeriod(day, period).classType === 'numbered'">
-                  {{ formatNumberedClassName(getClassForPeriod(day, period)) }}
-                </span>
-                <span v-else-if="getClassForPeriod(day, period).classType === 'special'">
-                  {{ getClassForPeriod(day, period).className }}
-                  <span v-if="getClassForPeriod(day, period).yearLevel" class="special-year-level-display">
-                    (Yr {{ getClassForPeriod(day, period).yearLevel }})
-                  </span>
-                </span>
-                <span v-else>?</span>
+                {{ getDisplayName(day, period) }}
               </div>
               <div v-else class="no-class">--</div>
             </td>
@@ -53,85 +43,109 @@
 </template>
 
 <script setup>
-import { computed, onMounted } from 'vue';
+import { computed, onMounted, watch } from 'vue';
 import { useStore } from 'vuex';
 
 const store = useStore();
 
-// Define days (including Saturday) and periods for the grid
+// days and periods
 const daysOfWeek = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 const periods = [1, 2, 3, 4, 5, 6];
 
-// --- Computed Properties from Store ---
 const scheduleData = computed(() => store.getters['schedule/regularSchedule']);
+
+// getters
+const mergedSchedule = computed(() => store.getters['schedule/mergedSchedule']);
 const classesList = computed(() => store.getters['classes/allClasses']);
+
+watch(
+  () => classesList.value,
+  cl => console.log('👥 classesList IDs:', cl.map(c => c.id)),
+  { immediate: true }
+);
+
 const isLoadingSchedule = computed(() => store.getters['schedule/isLoading']);
 const isLoadingClasses = computed(() => store.getters['classes/isLoading']);
 const scheduleError = computed(() => store.getters['schedule/error']);
 const classesError = computed(() => store.getters['classes/error']);
 
-// Check if there is any actual schedule data to display
-const hasScheduleData = computed(() => {
+// check data exists
+const hasScheduleData = computed(() =>
+  Object.values(mergedSchedule.value).some(dayArr =>
+    dayArr.some(slot => slot !== null)
+  )
+);
+
+const getClassForPeriod = (day, period) => {
+  const idx = period - 1;
+  const daySlots = mergedSchedule.value[day] || [];
+  const slot = daySlots[idx];
+
+  // console.log(`getClassForPeriod →`, { day, period, daySlots, slot });
+
+  if (!slot || !slot.classId) return null;
   return (
-    scheduleData.value &&
-    Object.keys(scheduleData.value).length > 0 &&
-    daysOfWeek.some((day) => scheduleData.value[day]?.some((slot) => slot !== null))
+    classesList.value.find((c) => String(c.id) === String(slot.classId)) ||
+    null
   );
-});
+};
 
-// --- Methods ---
+// capitalize utility
+const capitalize = s => s.charAt(0).toUpperCase() + s.slice(1);
 
-// Open the weekly editor modal
+// open modal
 const openWeeklyEditor = () => {
-  console.log('Opening Weekly Schedule Editor Modal');
   store.dispatch('ui/openModal', {
     modalName: 'weeklySchedule',
-    data: JSON.parse(JSON.stringify(scheduleData.value)),
+    data: JSON.parse(JSON.stringify(mergedSchedule.value))
   });
 };
 
-// Capitalize day names for headers
-const capitalize = (s) => {
-  if (typeof s !== 'string') return '';
-  return s.charAt(0).toUpperCase() + s.slice(1);
-};
+// helpers to get slot, class, name, color
+function getSlot(day, period) {
+  const arr = mergedSchedule.value[day] || [];
+  return arr[period - 1] || null;
+}
+function getClass(day, period) {
+  const slot = getSlot(day, period);
+  if (!slot?.classId) return null;
+  return classesList.value.find(c => c.id === slot.classId) || null;
+}
+function getDisplayName(day, period) {
+  const cls = getClass(day, period);
+  if (!cls) return '';
+  if (cls.classType === 'numbered') {
+    const y = +cls.yearLevel;
+    const displayYear = y <= 3 ? y : y - 3;
+    const suffix = y <= 3 ? 'J' : 'H';
+    return `${displayYear}${suffix}-${cls.classNumber}`;
+  }
+  return cls.className;
+}
+function getColor(day, period) {
+  const cls = getClass(day, period);
+  return cls?.color || 'transparent';
+}
 
-// Find full class details for a given day & period
-const getClassForPeriod = (day, period) => {
-  const idx = period - 1;
-  const slot = scheduleData.value?.[day]?.[idx];
-  if (!slot || !slot.classId) return null;
-  return classesList.value.find((c) => String(c.id) === String(slot.classId)) || null;
-};
+watch(
+  () => scheduleData.value,
+  (newSched) => {
+    console.log('🕵️‍♂️ [WeeklySchedulePanel] scheduleData now is:', newSched);
+    console.log('🕵️‍♂️ Tuesday slots:', newSched.tuesday);
+  },
+  { immediate: true }
+);
 
-// Get the background color for a class slot
-const getClassColor = (day, period) => {
-  const cls = getClassForPeriod(day, period);
-  return cls ? cls.color || '#FFFFFF' : null;
-};
+watch(
+  () => classesList.value,
+  (cl) => console.log('👥 [WeeklySchedulePanel] classesList is now:', cl),
+  { immediate: true }
+);
 
-// Format numbered class names like "1J-3" or "3H-8"
-const formatNumberedClassName = (cls) => {
-  if (!cls || cls.classType !== 'numbered') return '?';
-  const yearNum = parseInt(cls.yearLevel, 10);
-  const displayYear = yearNum <= 3 ? yearNum : yearNum - 3;
-  const suffix = yearNum <= 3 ? 'J' : 'H';
-  return `${displayYear}${suffix}-${cls.classNumber}`;
-};
-
-// --- Lifecycle Hook ---
+// fetch on mount
 onMounted(() => {
-  if (
-    (!scheduleData.value || Object.keys(scheduleData.value).length === 0) &&
-    !isLoadingSchedule.value
-  ) {
-    console.log('[WeeklySchedulePanel] Fetching regular schedule on mount.');
-    store.dispatch('schedule/fetchRegularSchedule');
-  }
-  if (classesList.value.length === 0 && !isLoadingClasses.value) {
-    console.log('[WeeklySchedulePanel] Fetching classes on mount.');
-    store.dispatch('classes/fetchClasses');
-  }
+  if (!isLoadingSchedule.value) store.dispatch('schedule/fetchRegularSchedule');
+  if (!isLoadingClasses.value) store.dispatch('classes/fetchClasses');
 });
 </script>
 
@@ -144,53 +158,34 @@ onMounted(() => {
 .schedule-table {
   width: 100%;
   border-collapse: collapse;
-  border: 1px solid var(--border-color);
   table-layout: fixed;
 }
 
 .schedule-table th,
 .schedule-table td {
   border: 1px solid var(--border-color);
-  padding: 0.6rem;
+  padding: 0.5rem;
   text-align: center;
-  font-size: 0.85rem;
-  vertical-align: middle;
-  height: 50px;
-  min-width: 90px;
-  transition: background-color 0.3s ease;
 }
 
 .schedule-table th {
-  background-color: var(--light);
-  font-weight: 600;
+  background: var(--light);
 }
 
-.schedule-table td:first-child {
+.period-cell {
+  background: var(--light);
   font-weight: 600;
-  background-color: var(--light) !important;
-  color: var(--secondary);
-  min-width: 60px;
-  width: 60px;
 }
 
 .schedule-item {
-  font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.special-year-level-display {
-  font-size: 0.8em;
-  color: var(--secondary);
-  margin-left: 0.3em;
-  font-style: italic;
-}
-
 .no-class {
   color: var(--secondary);
   font-style: italic;
-  font-size: 0.8rem;
 }
 
 .loading,
@@ -203,8 +198,11 @@ onMounted(() => {
 
 .error-message {
   color: var(--danger);
-  background-color: #f8d7da;
-  border: 1px solid #f5c6cb;
-  border-radius: var(--border-radius);
+  background: #f8d7da;
+}
+
+.btn-sm {
+  padding: 0.2rem 0.5rem;
+  font-size: 0.75rem;
 }
 </style>
