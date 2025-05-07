@@ -35,61 +35,72 @@ export default {
       return state.dailyExceptions.find((e) => e.date === dateString);
     },
 
-    // merged schedule with global days-off and global exceptions
     mergedSchedule: (state, _getters, rootState, rootGetters) => {
-      // 1) deep-clone the base schedule so we don’t mutate Vuex state
       const schedule = JSON.parse(JSON.stringify(state.regularSchedule));
-
-      // 2) toggles
       const applyGlobalDaysOff =
         rootGetters["globalSettings/shouldApplyGlobalDaysOff"];
       const applyGlobalExceptions =
         rootGetters["globalSettings/shouldApplyGlobalExceptions"];
-
-      // 3) global lists
       const globalDaysOffList = rootGetters["globalDaysOff/allGlobalDaysOff"];
       const globalExceptionsList =
         rootGetters["globalAppliedExceptions/allGlobalExceptions"];
+      const personalExceptionsList = state.dailyExceptions;
 
-      // helper: YYYY-MM-DD → weekday key
       const dateToWeekday = (ds) => {
         const d = new Date(ds + "T12:00:00");
         return d.toLocaleDateString("en-US", { weekday: "long" }).toLowerCase();
       };
 
-      // 4) apply global days-off (wipe out each entire day)
+      // 1) global days off
       if (applyGlobalDaysOff) {
         globalDaysOffList.forEach(({ date }) => {
           const wd = dateToWeekday(date);
-          if (schedule[wd]) schedule[wd] = Array(6).fill(null);
+          schedule[wd] = Array(6).fill(null);
         });
       }
 
-      // 5) apply global exceptions (replace entire day with pattern or clear)
+      // 2) global exceptions
       if (applyGlobalExceptions) {
         globalExceptionsList.forEach((exc) => {
           const wd = dateToWeekday(exc.date);
           if (!schedule[wd]) return;
+
           if (exc.isDayOff) {
+            // wipe out completely
             schedule[wd] = Array(6).fill(null);
-          } else if (exc.ExceptionPattern?.patternData) {
-            // patternData is an array of 6 entries (number or null)
-            schedule[wd] = exc.ExceptionPattern.patternData.map((slot) =>
-              slot != null ? { classId: slot } : null,
+          } else if (exc.exceptionPatternId) {
+            // **replace** with the pattern’s six‐slot data
+            schedule[wd] = exc.ExceptionPattern.patternData.map(
+              (slotClassId) =>
+                slotClassId != null ? { classId: slotClassId } : null,
+            );
+          } else {
+            // ad-hoc global: overlay on top of existing slots
+            schedule[wd] = schedule[wd].map((slot, idx) =>
+              idx === exc.periodIndex
+                ? { classId: exc.classId, notes: exc.reason }
+                : slot,
             );
           }
         });
       }
 
-      // 6) apply user-specific exceptions last, same logic
-      state.dailyExceptions.forEach((exc) => {
+      // 3) personal exceptions (same logic as global, last wins)
+      personalExceptionsList.forEach((exc) => {
         const wd = dateToWeekday(exc.date);
         if (!schedule[wd]) return;
+
         if (exc.isDayOff) {
           schedule[wd] = Array(6).fill(null);
-        } else if (exc.ExceptionPattern?.patternData) {
-          schedule[wd] = exc.ExceptionPattern.patternData.map((slot) =>
-            slot != null ? { classId: slot } : null,
+        } else if (exc.exceptionPatternId) {
+          schedule[wd] = exc.ExceptionPattern.patternData.map((slotClassId) =>
+            slotClassId != null ? { classId: slotClassId } : null,
+          );
+        } else {
+          schedule[wd] = schedule[wd].map((slot, idx) =>
+            idx === exc.periodIndex
+              ? { classId: exc.classId, notes: exc.reason }
+              : slot,
           );
         }
       });
