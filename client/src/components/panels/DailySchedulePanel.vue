@@ -90,7 +90,7 @@ const isDarkColor = hex => {
 };
 
 // Reactive state
-const selectedDate = ref(getTodayDateString());
+const saved = store.getters['ui/lastDailySelectedDate'];
 const isLoading = ref(false);
 const error = ref(null);
 const showDatePicker = ref(false);
@@ -115,6 +115,16 @@ const relativeDateString = computed(() => {
   return '';
 });
 
+const selectedDate = computed({
+  get() {
+    // pull store or default to today if unset 
+    return store.getters['ui/lastDailySelectedDate'] || getTodayDateString();
+  },
+  set(newDate) {
+    // keep Vuex in sync whenever you change days 
+    store.dispatch('ui/setLastDailyDate', newDate);
+  }
+});
 // Day off logic
 const isDayOff = computed(() => {
   if (applyGlobalDaysOff.value && globalDaysOff.value.some(d => d.date === selectedDate.value)) return true;

@@ -79,6 +79,8 @@ const hasScheduleData = computed(() => {
 // Function to open the editing modal
 const openWeeklyEditor = () => {
   console.log("Opening Weekly Schedule Editor Modal");
+  store.dispatch('ui/setLastDailyDate', selectedDate.value);
+
   store.dispatch('ui/openModal', {
     modalName: 'weeklySchedule',
     // Pass a deep copy of the schedule data to the modal

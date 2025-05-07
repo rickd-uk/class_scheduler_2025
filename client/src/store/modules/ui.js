@@ -23,74 +23,97 @@ export default {
       exceptionPatternEditor: null,
       // classEditor: null,
       classFormModal: null,
+      lastDailySelectedDate: null,
     },
     isLoading: false,
-    notification: null
+    notification: null,
   }),
 
   mutations: {
     OPEN_MODAL(state, { modalName, data = null }) {
-      console.log(`[UI Store Mutation] OPEN_MODAL for: ${modalName}. Current state: ${state.modals[modalName]}`); // <-- Add log
+      console.log(
+        `[UI Store Mutation] OPEN_MODAL for: ${modalName}. Current state: ${state.modals[modalName]}`,
+      ); // <-- Add log
       if (state.modals.hasOwnProperty(modalName)) {
         state.modals[modalName] = true;
         state.modalData[modalName] = data;
-        console.log(`[UI Store Mutation] State for ${modalName} set to: ${state.modals[modalName]}`); // <-- Add log
+        console.log(
+          `[UI Store Mutation] State for ${modalName} set to: ${state.modals[modalName]}`,
+        ); // <-- Add log
       } else {
         console.warn(`Modal "${modalName}" does not exist in UI store state.`);
       }
     },
 
     CLOSE_MODAL(state, modalName) {
-      console.log(`[UI Store Mutation] CLOSE_MODAL for: ${modalName}. Current state: ${state.modals[modalName]}`);
+      console.log(
+        `[UI Store Mutation] CLOSE_MODAL for: ${modalName}. Current state: ${state.modals[modalName]}`,
+      );
       if (state.modals.hasOwnProperty(modalName)) {
         state.modals[modalName] = false;
         state.modalData[modalName] = null;
-        console.log(`[UI Store Mutation] State for ${modalName} set to: ${state.modals[modalName]}`);
+        console.log(
+          `[UI Store Mutation] State for ${modalName} set to: ${state.modals[modalName]}`,
+        );
       } else {
         console.warn(`Modal "${modalName}" does not exist in UI store state.`);
       }
     },
     // Other mutations...
-    SET_LOADING(state, isLoading) { state.isLoading = isLoading; },
-    SET_NOTIFICATION(state, { type, message }) { state.notification = { type, message }; },
-    CLEAR_NOTIFICATION(state) { state.notification = null; }
+    SET_LOADING(state, isLoading) {
+      state.isLoading = isLoading;
+    },
+    SET_NOTIFICATION(state, { type, message }) {
+      state.notification = { type, message };
+    },
+    SET_LAST_DAILY_DATE(state, date) {
+      state.lastDailySelectedDate = date;
+    },
+    CLEAR_NOTIFICATION(state) {
+      state.notification = null;
+    },
   },
 
   actions: {
     openModal({ commit }, { modalName, data = null }) {
       console.log(`[UI Store Action] openModal called for: ${modalName}`); // <-- Add log
       const dataCopy = data ? JSON.parse(JSON.stringify(data)) : null;
-      commit('OPEN_MODAL', { modalName, data: dataCopy });
+      commit("OPEN_MODAL", { modalName, data: dataCopy });
     },
     closeModal({ commit }, modalName) {
       console.log(`[UI Store Action] closeModal called for: ${modalName}`);
-      commit('CLOSE_MODAL', modalName);
+      commit("CLOSE_MODAL", modalName);
     },
 
-
     // Other actions...
-    setLoading({ commit }, isLoading) { commit('SET_LOADING', isLoading); },
-
-    showNotification({ commit }, { type = 'info', message, duration = 3000 }) {
-      commit('SET_NOTIFICATION', { type, message });
+    setLoading({ commit }, isLoading) {
+      commit("SET_LOADING", isLoading);
+    },
+    setLastDailyDate({ commit }, date) {
+      commit("SET_LAST_DAILY_DATE", date);
+    },
+    showNotification({ commit }, { type = "info", message, duration = 3000 }) {
+      commit("SET_NOTIFICATION", { type, message });
       // Automatically clear notification after duration
       if (duration > 0) {
         setTimeout(() => {
-          commit('CLEAR_NOTIFICATION');
+          commit("CLEAR_NOTIFICATION");
         }, duration);
       }
     },
 
-    clearNotification({ commit }) { commit('CLEAR_NOTIFICATION'); }
+    clearNotification({ commit }) {
+      commit("CLEAR_NOTIFICATION");
+    },
   },
 
   getters: {
     isModalOpen: (state) => (modalName) => {
-       return state.modals[modalName] || false;
+      return state.modals[modalName] || false;
     },
     getModalData: (state) => (modalName) => {
-        return state.modalData[modalName] || null;
+      return state.modalData[modalName] || null;
     },
-  }
-}
-
+    lastDailySelectedDate: (state) => state.lastDailySelectedDate,
+  },
+};
