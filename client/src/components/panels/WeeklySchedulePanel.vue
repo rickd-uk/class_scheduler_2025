@@ -1,9 +1,13 @@
 <template>
   <div class="panel weekly-schedule-panel">
     <div class="panel-header">
-      <h2 class="panel-title">Regular Weekly Schedule</h2>
+      <h2 class="panel-title"></h2>
       <button @click="openWeeklyEditor" class="btn btn-primary btn-sm">
-        Edit Schedule
+        Edit
+      </button>
+      <!-- Clear everything -->
+      <button @click="clearAll" class="btn btn-danger btn-sm ml-2">
+        Clear All
       </button>
     </div>
 
@@ -17,7 +21,11 @@
         <thead>
           <tr>
             <th>Period</th>
-            <th v-for="day in daysOfWeek" :key="day">{{ capitalize(day) }}</th>
+            <th v-for="day in daysOfWeek" :key="day" class="day-header">{{ capitalize(day) }}
+              <!-- Clear button for each day -->
+              <button @click="clearDay(day)" class="btn btn-outline-danger btn-sm clear-btn"
+                title="Clear {{ capitalize(day)}}">&times;</button>
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -79,7 +87,6 @@ const hasScheduleData = computed(() => {
 // Function to open the editing modal
 const openWeeklyEditor = () => {
   console.log("Opening Weekly Schedule Editor Modal");
-  store.dispatch('ui/setLastDailyDate', selectedDate.value);
 
   store.dispatch('ui/openModal', {
     modalName: 'weeklySchedule',
@@ -138,7 +145,34 @@ const formatNumberedClassName = (cls) => {
   // Return formatted string
   return `${displayYear}${schoolSuffix}-${cls.classNumber}`;
 };
+const periodsCount = periods.length;
 
+const clearDay = async (day) => {
+  // clone the current reg. schedule 
+  const newSched = JSON.parse(JSON.stringify(scheduleData.value));
+  // replace the day's array with all-null 
+  newSched[day] = Array(periodsCount).fill(null);
+
+  try {
+    await store.dispatch('schedule/updateRegularSchedule', newSched);
+  } catch (e) {
+    console.error(`Failed to clear ${day}`, e);
+  }
+}
+
+const clearAll = async () => {
+  // build a blank week 
+  const blank = {};
+  daysOfWeek.forEach(d => {
+    blank[d] = Array(periodsCount).fill(null);
+  });
+
+  try {
+    await store.dispatch('schedule/updateRegularSchedule', blank);
+  } catch (e) {
+    console.error(`Failed to clear all days`, e);
+  }
+};
 
 // --- Lifecycle Hook ---
 onMounted(() => {
@@ -231,6 +265,20 @@ onMounted(() => {
   font-style: italic;
 }
 
+.day-header {
+  position: relative;
+  padding-top: 1.2rem;
+}
+
+.clear-btn {
+  position: absolute;
+  top: 0.2rem;
+  right: 0.2rem;
+  line-height: 1;
+  padding: 0.1rem 0.3rem;
+  font-size: 0.75rem;
+}
+
 .no-class {
   color: var(--secondary);
   /* Lighter color for empty slots */
@@ -257,6 +305,19 @@ onMounted(() => {
   border: 1px solid #f5c6cb;
   border-radius: var(--border-radius);
 }
+
+.btn-outline-danger {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.btn-outline-danger:hover,
+.btn-outline-danger:focus {
+  background-color: var(--danger);
+  color: #fff;
+}
+
+
 
 /* Add styling for cell content contrast if background is dark */
 .schedule-table td {
