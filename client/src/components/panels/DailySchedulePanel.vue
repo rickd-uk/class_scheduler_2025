@@ -37,12 +37,18 @@
       <template v-else>
         <ul v-if="dailySchedule.length" class="daily-schedule-list">
           <li v-for="(item, idx) in dailySchedule" :key="idx" class="schedule-list-item"
-            :style="{ backgroundColor: item.color || 'transparent' }"
-            :class="{ 'has-dark-background': isDarkColor(item.color) }">
+            :style="{ backgroundColor: item.color || 'transparent' }" :class="{
+              'schedule-list-item': true,
+              'exception-item': item.isException,
+              'has-dark-background': isDarkColor(item.color)
+            }">
+
+
             <span class="item-text">
               {{ item.time }} – {{ item.className || item.notes || 'Scheduled Item' }}
               <span v-if="item.duration">({{ item.duration }} min)</span>
-              <span v-if="item.isException" class="exception-tag">(Modified)</span>
+              <span v-if="item.isException" class="exception-badge">Exception</span>
+
             </span>
           </li>
         </ul>
@@ -51,7 +57,7 @@
         </p>
         <div class="exception-controls mt-3">
           <button class="btn btn-secondary btn-sm" @click="openExceptionModal">
-            Edit Exceptions for {{ formattedDate }}
+            Edit
           </button>
         </div>
       </template>
@@ -82,7 +88,7 @@ const dateToWeekday = ds => {
   const d = new Date(ds + 'T12:00:00');
   return d.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
 };
-const periodTimes = ['09:00', '10:00', '11:00', '12:00', '13:30', '14:00'];
+const periodTimes = ['09:00', '10:00', '11:00', '12:00', '13:30', '14:30'];
 const isDarkColor = hex => {
   if (!hex || hex.length < 7) return false;
   const [r, g, b] = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
@@ -148,7 +154,8 @@ const dayOffReason = computed(() => {
 
 const dailySchedule = computed(() => {
   const wd = dateToWeekday(selectedDate.value)
-  let slots = getScheduleForDay(wd)
+  const base = getScheduleForDay(wd)
+  let slots = [...base]   // clone the six regular slots
 
   // --- apply only the single exception for this exact date ---
   const exc = getAppliedExceptionForDate(selectedDate.value)
@@ -156,9 +163,14 @@ const dailySchedule = computed(() => {
     if (exc.isDayOff) {
       slots = Array(6).fill(null)
     } else if (exc.exceptionPatternId) {
-      slots = exc.ExceptionPattern.patternData.map(pid =>
-        pid != null ? { classId: pid } : null
-      )
+      // ----- apply the pattern properly -----
+      slots = exc.ExceptionPattern.patternData.map(fromPeriod => {
+        if (fromPeriod == null) return null
+        const orig = base[fromPeriod - 1]      // get the original slot
+        return orig && orig.classId
+          ? { classId: orig.classId }          // pull its real classId
+          : null
+      })
     } else if (exc.periodIndex != null) {
       slots = slots.map((s, i) =>
         i === exc.periodIndex
@@ -181,7 +193,10 @@ const dailySchedule = computed(() => {
         time: periodTimes[idx] || `P${idx + 1}`,
         className,
         color: cls?.color,
-        isException: !!exc && exc.periodIndex === idx,
+        isException: !!exc && (
+          exc.exceptionPatternId != null ||
+          exc.periodIndex === idx
+        ),
         notes: slot.notes
       }
     })
@@ -295,6 +310,23 @@ watch(showDatePicker, async val => { if (val) { await nextTick(); datePickerInpu
   margin-top: 1.5rem;
   padding-top: 1rem;
   border-top: 1px solid var(--border-color);
+}
+
+/* makes the entire row stand out */
+.schedule-list-item.exception-item {
+  border-left: 4px solid var(--warning);
+}
+
+/* a little badge next to the text */
+.exception-badge {
+  display: inline-block;
+  margin-left: 0.5em;
+  padding: 0.1em 0.4em;
+  font-size: 0.75em;
+  font-weight: bold;
+  color: #fff;
+  background-color: var(--warning);
+  border-radius: 3px;
 }
 
 /* Styles for loading/error/placeholder messages */
