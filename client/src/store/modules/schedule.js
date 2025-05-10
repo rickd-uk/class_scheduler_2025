@@ -1,5 +1,3 @@
-// client/src/store/modules/schedule.js
-
 import ScheduleService from "../../services/ScheduleService";
 import AppliedExceptionsService from "../../services/AppliedExceptionsService";
 
@@ -30,13 +28,13 @@ export default {
       ].slice(0, 6);
     },
 
-    // single-date exception
-    getAppliedExceptionForDate: (state) => (dateString) => {
-      return state.dailyExceptions.find((e) => e.date === dateString);
-    },
+    getAppliedExceptionForDate: (state) => (dateString) =>
+      state.dailyExceptions.find((e) => e.date === dateString),
 
     mergedSchedule: (state, _getters, rootState, rootGetters) => {
+      // start from a deep‐clone of the regular grid
       const schedule = JSON.parse(JSON.stringify(state.regularSchedule));
+
       const applyGlobalDaysOff =
         rootGetters["globalSettings/shouldApplyGlobalDaysOff"];
       const applyGlobalExceptions =
@@ -51,7 +49,7 @@ export default {
         return d.toLocaleDateString("en-US", { weekday: "long" }).toLowerCase();
       };
 
-      // 1) global days off
+      // 1) apply global days off
       if (applyGlobalDaysOff) {
         globalDaysOffList.forEach(({ date }) => {
           const wd = dateToWeekday(date);
@@ -59,23 +57,27 @@ export default {
         });
       }
 
-      // 2) global exceptions
+      // 2) overlay global exceptions
       if (applyGlobalExceptions) {
         globalExceptionsList.forEach((exc) => {
           const wd = dateToWeekday(exc.date);
           if (!schedule[wd]) return;
 
           if (exc.isDayOff) {
-            // wipe out completely
+            // full wipe
             schedule[wd] = Array(6).fill(null);
           } else if (exc.exceptionPatternId) {
-            // **replace** with the pattern’s six‐slot data
+            // pattern: remap from the regularSchedule
+            const original = state.regularSchedule[wd] || [];
             schedule[wd] = exc.ExceptionPattern.patternData.map(
-              (slotClassId) =>
-                slotClassId != null ? { classId: slotClassId } : null,
+              (origPeriod) => {
+                if (origPeriod == null) return null;
+                const slot = original[origPeriod - 1];
+                return slot ? { classId: slot.classId } : null;
+              },
             );
           } else {
-            // ad-hoc global: overlay on top of existing slots
+            // ad‐hoc single period override
             schedule[wd] = schedule[wd].map((slot, idx) =>
               idx === exc.periodIndex
                 ? { classId: exc.classId, notes: exc.reason }
@@ -85,7 +87,7 @@ export default {
         });
       }
 
-      // 3) personal exceptions (same logic as global, last wins)
+      // 3) overlay personal (user) exceptions
       personalExceptionsList.forEach((exc) => {
         const wd = dateToWeekday(exc.date);
         if (!schedule[wd]) return;
@@ -93,9 +95,12 @@ export default {
         if (exc.isDayOff) {
           schedule[wd] = Array(6).fill(null);
         } else if (exc.exceptionPatternId) {
-          schedule[wd] = exc.ExceptionPattern.patternData.map((slotClassId) =>
-            slotClassId != null ? { classId: slotClassId } : null,
-          );
+          const original = state.regularSchedule[wd] || [];
+          schedule[wd] = exc.ExceptionPattern.patternData.map((origPeriod) => {
+            if (origPeriod == null) return null;
+            const slot = original[origPeriod - 1];
+            return slot ? { classId: slot.classId } : null;
+          });
         } else {
           schedule[wd] = schedule[wd].map((slot, idx) =>
             idx === exc.periodIndex
@@ -130,7 +135,6 @@ export default {
           }
         }
       });
-      console.log("🕵️‍♂️ [mutation] formatted regularSchedule:", formatted);
       state.regularSchedule = formatted;
     },
 
@@ -159,12 +163,10 @@ export default {
     SET_LOADING(state, val) {
       state.isLoading = val;
     },
-
     SET_ERROR(state, err) {
       state.error = err;
       state.isLoading = false;
     },
-
     RESET_STATE(state) {
       state.regularSchedule = {};
       state.dailyExceptions = [];

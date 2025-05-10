@@ -82,7 +82,7 @@ const dateToWeekday = ds => {
   const d = new Date(ds + 'T12:00:00');
   return d.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
 };
-const periodTimes = ['09:00', '10:00', '11:00', '13:00', '14:00', '15:00'];
+const periodTimes = ['09:00', '10:00', '11:00', '12:00', '13:30', '14:00'];
 const isDarkColor = hex => {
   if (!hex || hex.length < 7) return false;
   const [r, g, b] = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
@@ -97,7 +97,9 @@ const showDatePicker = ref(false);
 const datePickerInput = ref(null);
 
 // Vuex getters
-const getScheduleForDay = day => store.getters['schedule/getScheduleForDay'](day);
+const getScheduleForDay = day => store.getters['schedule/getScheduleForDay'](day) || [];
+const getAppliedExceptionForDate = date => store.getters['schedule/getAppliedExceptionForDate'](date)
+
 const personalDaysOff = computed(() => store.getters['daysOff/allDaysOff']);
 const personalExceptions = computed(() => store.getters['schedule/appliedExceptions']);
 const classesList = computed(() => store.getters['classes/allClasses']);
@@ -143,27 +145,49 @@ const dayOffReason = computed(() => {
   return p?.reason || 'Day Off';
 });
 
-// Build dailySchedule
+
 const dailySchedule = computed(() => {
-  const wd = dateToWeekday(selectedDate.value);
-  const slots = getScheduleForDay(wd);
-  return slots.map((slot, idx) => {
-    if (!slot || !slot.classId) return null;
-    const cls = classesList.value.find(c => c.id === slot.classId);
-    const className = cls
-      ? cls.classType === 'numbered'
-        ? `${(cls.yearLevel <= 3 ? cls.yearLevel : cls.yearLevel - 3)}${(cls.yearLevel <= 3 ? 'J' : 'H')}-${cls.classNumber}`
-        : cls.className
-      : slot.notes;
-    return {
-      time: periodTimes[idx] || `P${idx + 1}`,
-      className,
-      color: cls?.color,
-      isException: !!slot.isException,
-      notes: slot.notes
-    };
-  }).filter(x => x);
-});
+  const wd = dateToWeekday(selectedDate.value)
+  let slots = getScheduleForDay(wd)
+
+  // --- apply only the single exception for this exact date ---
+  const exc = getAppliedExceptionForDate(selectedDate.value)
+  if (exc) {
+    if (exc.isDayOff) {
+      slots = Array(6).fill(null)
+    } else if (exc.exceptionPatternId) {
+      slots = exc.ExceptionPattern.patternData.map(pid =>
+        pid != null ? { classId: pid } : null
+      )
+    } else if (exc.periodIndex != null) {
+      slots = slots.map((s, i) =>
+        i === exc.periodIndex
+          ? { classId: exc.classId, notes: exc.reason }
+          : s
+      )
+    }
+  }
+
+  return slots
+    .map((slot, idx) => {
+      if (!slot || !slot.classId) return null
+      const cls = classesList.value.find(c => c.id === slot.classId)
+      const className = cls
+        ? cls.classType === 'numbered'
+          ? `${(cls.yearLevel <= 3 ? cls.yearLevel : cls.yearLevel - 3)}${(cls.yearLevel <= 3 ? 'J' : 'H')}-${cls.classNumber}`
+          : cls.className
+        : slot.notes
+      return {
+        time: periodTimes[idx] || `P${idx + 1}`,
+        className,
+        color: cls?.color,
+        isException: !!exc && exc.periodIndex === idx,
+        notes: slot.notes
+      }
+    })
+    .filter(x => x)
+})
+
 
 // Navigation
 const changeDay = n => { const d = new Date(selectedDate.value); d.setDate(d.getDate() + n); selectedDate.value = toYYYYMMDD(d); };

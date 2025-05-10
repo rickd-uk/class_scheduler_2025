@@ -1,6 +1,6 @@
-import ApiService from './ApiService';
+import ApiService from "./ApiService";
 
-const APPLIED_EXCEPTIONS_ENDPOINT = '/api/applied-exceptions';
+const APPLIED_EXCEPTIONS_ENDPOINT = "/api/applied-exceptions";
 
 /**
  * Service object for interacting with the Applied Exception API endpoints.
@@ -11,7 +11,9 @@ const AppliedExceptionsService = {
    * @returns {Promise<AxiosResponse<any>>} Promise resolving with the list of applied exceptions.
    */
   getAll() {
-    console.log(`AppliedExceptionsService: Fetching all from ${APPLIED_EXCEPTIONS_ENDPOINT}`);
+    console.log(
+      `AppliedExceptionsService: Fetching all from ${APPLIED_EXCEPTIONS_ENDPOINT}`,
+    );
     // Uses the generic ApiService GET method to call the base endpoint
     return ApiService.get(APPLIED_EXCEPTIONS_ENDPOINT);
   },
@@ -23,7 +25,9 @@ const AppliedExceptionsService = {
    */
   getForDate(date) {
     const url = `${APPLIED_EXCEPTIONS_ENDPOINT}/${date}`;
-    console.log(`AppliedExceptionsService: Fetching for date ${date} via GET ${url}`);
+    console.log(
+      `AppliedExceptionsService: Fetching for date ${date} via GET ${url}`,
+    );
     return ApiService.get(url);
   },
 
@@ -34,8 +38,10 @@ const AppliedExceptionsService = {
    * @returns {Promise<AxiosResponse<any>>} Promise resolving with the created/updated applied exception object.
    */
   apply(exceptionData) {
-     console.log(`AppliedExceptionsService: Applying exception via POST ${APPLIED_EXCEPTIONS_ENDPOINT}`);
-     // Uses the generic ApiService POST method
+    console.log(
+      `AppliedExceptionsService: Applying exception via POST ${APPLIED_EXCEPTIONS_ENDPOINT}`,
+    );
+    // Uses the generic ApiService POST method
     return ApiService.post(APPLIED_EXCEPTIONS_ENDPOINT, exceptionData);
   },
 
@@ -45,13 +51,14 @@ const AppliedExceptionsService = {
    * @returns {Promise<AxiosResponse<any>>} Promise resolving (usually empty with status 204 on success).
    */
   clear(date) {
-     const url = `${APPLIED_EXCEPTIONS_ENDPOINT}/${date}`;
-     console.log(`AppliedExceptionsService: Clearing exception for date ${date} via DELETE ${url}`);
-     // Uses the generic ApiService DELETE method
-     return ApiService.delete(url);
+    const url = `${APPLIED_EXCEPTIONS_ENDPOINT}/${date}`;
+    console.log(
+      `AppliedExceptionsService: Clearing exception for date ${date} via DELETE ${url}`,
+    );
+    // Uses the generic ApiService DELETE method
+    return ApiService.delete(url);
   },
 };
 
 // Export the service object for use in the Vuex store
 export default AppliedExceptionsService;
-
