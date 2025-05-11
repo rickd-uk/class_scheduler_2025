@@ -8,6 +8,7 @@ const router = express.Router();
 // GET all patterns for the user
 router.get("/", async (req, res) => {
   const userId = req.user.id;
+
   try {
     const patterns = await ExceptionPattern.findAll({
       where: {
@@ -25,7 +26,7 @@ router.get("/", async (req, res) => {
 });
 
 // POST a new pattern
-router.post("/", authenticateToken, isAdmin, async (req, res) => {
+router.post("/", authenticateToken, async (req, res) => {
   const userId = req.user.id;
   const { name, patternData } = req.body;
   if (!name || !patternData) {
@@ -33,13 +34,15 @@ router.post("/", authenticateToken, isAdmin, async (req, res) => {
       .status(400)
       .json({ message: "Name and pattern data are required." });
   }
+
+  const canSetGlobal = req.user.isAdmin === true;
   // TODO: Add validation for patternData structure
   try {
     const newPattern = await ExceptionPattern.create({
       name,
       patternData,
       userId,
-      isGlobal: true,
+      isGlobal: canSetGlobal,
     });
     res.status(201).json(newPattern);
   } catch (error) {
@@ -56,12 +59,12 @@ router.post("/", authenticateToken, isAdmin, async (req, res) => {
 });
 
 // PUT (Update) an existing pattern
-router.put("/:id", authenticateToken, isAdmin, async (req, res) => {
+router.put("/:id", authenticateToken, async (req, res) => {
   const userId = req.user.id;
   const patternId = req.params.id;
   const { name, patternData } = req.body;
   if (!name || !patternData) {
-    return res
+    return re
       .status(400)
       .json({ message: "Name and pattern data are required." });
   }
@@ -93,7 +96,7 @@ router.put("/:id", authenticateToken, isAdmin, async (req, res) => {
 });
 
 // DELETE a pattern
-router.delete("/:id", authenticateToken, isAdmin, async (req, res) => {
+router.delete("/:id", authenticateToken, async (req, res) => {
   const userId = req.user.id;
   const patternId = req.params.id;
   try {
