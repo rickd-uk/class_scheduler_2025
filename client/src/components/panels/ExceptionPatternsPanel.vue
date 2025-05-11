@@ -1,41 +1,47 @@
 <template>
-  <div class="panel exception-patterns-panel">
-    <div class="panel-header">
+  <CollapsiblePanel>
+    <!-- ← only the title here -->
+    <template #header>
       <h3 class="panel-title">Exceptions</h3>
-      <button class="btn btn-sm btn-primary" @click="openAddModal">
-        +
-      </button>
-    </div>
-    <div class="panel-body">
-      <div v-if="isLoading" class="loading">Loading patterns...</div>
-      <div v-else-if="error" class="error-message">{{ error }}</div>
-      <ul v-else-if="patterns.length > 0" class="item-list">
-        <li v-for="pattern in patterns" :key="pattern.id" class="item">
-          <div class="item-details">
-            <span class="item-name">{{ pattern.name }}</span>
-          </div>
-          <div class="item-actions">
-            <button class="btn btn-sm btn-secondary" @click="openEditModal(pattern)" title="Edit Pattern">
-              Edit
-            </button>
-            <button class="btn btn-sm btn-danger" @click="handleDeletePattern(pattern.id)"
-              :disabled="deletingPatternId === pattern.id">
-              {{ deletingPatternId === pattern.id ? 'Deleting...' : 'Del' }}
-            </button>
-          </div>
-        </li>
-      </ul>
-      <p v-else class="placeholder-content">No exception patterns created yet.</p>
-    </div>
-  </div>
+    </template>
+
+    <!-- ← only your add‐button here -->
+    <template #actions>
+      <button class="btn btn-sm btn-primary" @click.stop="openAddModal" title="Add Exception Pattern">+</button>
+    </template>
+
+    <!-- ← everything else sits in the body -->
+    <template #body>
+      <div class="panel-body">
+        <div v-if="isLoading" class="loading">Loading patterns…</div>
+        <div v-else-if="error" class="error-message">{{ error }}</div>
+        <ul v-else-if="patterns.length" class="item-list">
+          <li v-for="pattern in patterns" :key="pattern.id" class="item">
+            <div class="item-details">
+              {{ pattern.name }}
+            </div>
+            <div class="item-actions">
+              <button class="btn btn-sm btn-secondary" @click="openEditModal(pattern)" title="Edit">Edit</button>
+              <button class="btn btn-sm btn-danger" @click="handleDeletePattern(pattern.id)"
+                :disabled="deletingPatternId === pattern.id">
+                {{ deletingPatternId === pattern.id ? 'Deleting…' : 'Del' }}
+              </button>
+            </div>
+          </li>
+        </ul>
+        <p v-else class="placeholder-content">No exception patterns created yet.</p>
+      </div>
+    </template>
+  </CollapsiblePanel>
 </template>
 
+
 <script setup>
+import CollapsiblePanel from './CollapsiblePanel.vue';
 import { ref, computed, onMounted } from 'vue';
 import { useStore } from 'vuex';
 
 const store = useStore();
-
 const isAdminUser = computed(() => !!store.getters['auth/currentUser']?.isAdmin)
 
 // --- Component State ---
@@ -115,6 +121,8 @@ onMounted(() => {
 
 <style scoped>
 /* Styles similar to other panels */
+
+
 .panel-body {
   max-height: 300px;
   overflow-y: auto;

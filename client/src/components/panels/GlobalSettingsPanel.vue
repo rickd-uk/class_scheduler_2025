@@ -1,48 +1,55 @@
 <template>
-  <div class="panel global-settings-panel admin-panel">
-    <div class="panel-header">
+  <CollapsiblePanel>
+    <!-- just the centered title -->
+    <template #header>
       <h3 class="panel-title">Global Settings</h3>
-    </div>
-    <div class="panel-body">
-      <div v-if="isLoading" class="loading">Loading settings...</div>
-      <div v-else-if="error" class="error-message">{{ error }}</div>
-      <div v-else class="settings-controls">
-        <div class="settings-toggles">
-          <div class="form-check form-switch">
-            <input class="form-check-input" type="checkbox" role="switch" id="applyGlobalDaysOffToggle"
-              :checked="applyGlobalDaysOff" @change="updateSetting('applyGlobalDaysOff', $event.target.checked)"
-              :disabled="isUpdating">
-            <label class="form-check-label" for="applyGlobalDaysOffToggle">
-              Apply Global Days Off
-            </label>
+    </template>
+
+    <!-- no actions slot, so nothing shows on the right -->
+
+    <!-- everything else in the body -->
+    <template #body>
+      <div class="panel-body">
+        <div v-if="isLoading" class="loading">Loading settings...</div>
+        <div v-else-if="error" class="error-message">{{ error }}</div>
+        <div v-else class="settings-controls">
+          <div class="settings-toggles">
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" role="switch" id="applyGlobalDaysOffToggle"
+                :checked="applyGlobalDaysOff" @change="updateSetting('applyGlobalDaysOff', $event.target.checked)"
+                :disabled="isUpdating" />
+              <label class="form-check-label" for="applyGlobalDaysOffToggle">
+                Apply Global Days Off
+              </label>
+            </div>
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" role="switch" id="applyGlobalExceptionsToggle"
+                :checked="applyGlobalExceptions" @change="updateSetting('applyGlobalExceptions', $event.target.checked)"
+                :disabled="isUpdating" />
+              <label class="form-check-label" for="applyGlobalExceptionsToggle">
+                Apply Global Schedule Exceptions
+              </label>
+            </div>
+            <p v-if="updateError" class="error-message small-error mt-2">
+              {{ updateError }}
+            </p>
           </div>
-          <div class="form-check form-switch">
-            <input class="form-check-input" type="checkbox" role="switch" id="applyGlobalExceptionsToggle"
-              :checked="applyGlobalExceptions" @change="updateSetting('applyGlobalExceptions', $event.target.checked)"
-              :disabled="isUpdating">
-            <label class="form-check-label" for="applyGlobalExceptionsToggle">
-              Apply Global Schedule Exceptions
-            </label>
-          </div>
-          <p v-if="updateError" class="error-message small-error mt-2">{{ updateError }}</p>
         </div>
-
-
-
+        <small class="text-muted mt-2 d-block px-3 pb-2">
+          Note: Global settings apply to all users. User‐specific settings override regular schedule, but global
+          settings override user‐specific ones.
+        </small>
       </div>
-      <small class="text-muted mt-2 d-block px-3 pb-2">
-        Note: Global settings apply to all users. User-specific settings override regular schedule, but global settings
-        override user-specific ones.
-      </small>
-    </div>
-  </div>
+    </template>
+  </CollapsiblePanel>
 </template>
+
 
 <script setup>
 // Import necessary functions from Vue and Vuex
 import { ref, computed, onMounted } from 'vue';
 import { useStore } from 'vuex';
-
+import CollapsiblePanel from './CollapsiblePanel.vue';
 // Initialize Vuex store
 const store = useStore();
 

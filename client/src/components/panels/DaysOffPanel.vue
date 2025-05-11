@@ -1,40 +1,39 @@
 <template>
-  <div class="panel days-off-panel">
-    <div class="panel-header">
+  <CollapsiblePanel>
+    <template #header>
       <h3 class="panel-title">Days Off</h3>
-      <button class="btn btn-sm btn-primary" @click="openAddModal">
-        +
-      </button>
-    </div>
-    <div class="panel-body">
-      <div v-if="isLoading" class="loading">Loading days off...</div>
-      <div v-else-if="fetchError" class="error-message">{{ fetchError }}</div>
-      <ul v-else-if="daysOff.length > 0" class="item-list">
-        <li v-for="day in daysOff" :key="day.id || day.date" class="item">
-          <span class="color-square" :style="{ backgroundColor: day.color || '#F0F0F0' }"></span>
-          <div class="item-details">
-            <span class="item-name">{{ formatDate(day.date) }}</span>
-            <span v-if="day.reason" class="item-meta">{{ day.reason }}</span>
-          </div>
-          <div class="item-actions">
-            <button class="btn btn-sm btn-secondary" @click="openEditModal(day)" title="Edit Reason/Color">
-              Edit
-            </button>
-            <button class="btn btn-sm btn-danger" @click="handleDeleteDayOff(day.date)"
-              :disabled="deletingDate === day.date">
-              {{ deletingDate === day.date ? 'Deleting...' : 'Del' }}
-            </button>
-          </div>
-        </li>
-      </ul>
-      <p v-else class="placeholder-content">No specific days off configured.</p>
-    </div>
-  </div>
+    </template>
+    <template #actions>
+      <button class="btn btn-sm btn-primary" @click="openAddModal">+</button>
+    </template>
+    <template #body>
+      <div class="panel-body">
+        <div v-if="isLoading" class="loading">Loading days off…</div>
+        <div v-else-if="fetchError" class="error-message">{{ fetchError }}</div>
+        <ul v-else-if="daysOff.length" class="item-list">
+          <li v-for="day in daysOff" :key="day.id || day.date" class="item">
+            <span class="color-square" :style="{ backgroundColor: day.color || '#F0F0F0' }"></span>
+            <div class="item-details">
+              <span class="item-name">{{ formatDate(day.date) }}</span>
+              <span v-if="day.reason" class="item-meta">{{ day.reason }}</span>
+            </div>
+            <div class="item-actions">
+              <button class="btn btn-sm btn-secondary" @click="openEditModal(day)">Edit</button>
+              <button class="btn btn-sm btn-danger" @click="handleDeleteDayOff(day.date)"
+                :disabled="deletingDate === day.date">Del</button>
+            </div>
+          </li>
+        </ul>
+        <p v-else class="placeholder-content">No specific days off configured.</p>
+      </div>
+    </template>
+  </CollapsiblePanel>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'; // Removed reactive
 import { useStore } from 'vuex';
+import CollapsiblePanel from './CollapsiblePanel.vue';
 
 const store = useStore();
 
