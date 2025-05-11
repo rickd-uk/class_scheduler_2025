@@ -2,7 +2,7 @@
 import ApiService from "./ApiService";
 
 // Define the base endpoint for class API calls
-const CLASSES_ENDPOINT = "/api/classes"; // Matches server/routes/classRoutes.js
+const CLASSES_ENDPOINT = "/classes"; // Matches server/routes/classRoutes.js
 
 /**
  * Service object for interacting with the class API endpoints.

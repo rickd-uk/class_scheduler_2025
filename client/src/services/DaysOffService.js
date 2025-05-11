@@ -1,7 +1,7 @@
 import ApiService from './ApiService';
 
 // Define the base endpoint for Days Off API calls
-const DAYS_OFF_ENDPOINT = '/api/days-off'; // Matches server route mount point
+const DAYS_OFF_ENDPOINT = '/days-off'; // Matches server route mount point
 
 /**
  * Service object for interacting with the Days Off API endpoints.

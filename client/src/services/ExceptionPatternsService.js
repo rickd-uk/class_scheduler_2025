@@ -1,7 +1,7 @@
 import ApiService from './ApiService';
 
 // Base endpoint for exception pattern API calls
-const EXCEPTION_PATTERNS_ENDPOINT = '/api/exception-patterns';
+const EXCEPTION_PATTERNS_ENDPOINT = '/exception-patterns';
 
 /**
  * Service object for interacting with the Exception Pattern API endpoints.

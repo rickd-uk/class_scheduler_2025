@@ -1,6 +1,6 @@
 import ApiService from "./ApiService";
 
-const APPLIED_EXCEPTIONS_ENDPOINT = "/api/applied-exceptions";
+const APPLIED_EXCEPTIONS_ENDPOINT = "/applied-exceptions";
 
 /**
  * Service object for interacting with the Applied Exception API endpoints.

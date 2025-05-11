@@ -2,7 +2,7 @@
 import ApiService from './ApiService';
 
 // Define the base endpoint for textbook API calls
-const TEXTBOOKS_ENDPOINT = '/api/textbooks'; // Matches server/routes/textbookRoutes.js
+const TEXTBOOKS_ENDPOINT = '/textbooks'; // Matches server/routes/textbookRoutes.js
 
 /**
  * Service object for interacting with the textbook API endpoints.

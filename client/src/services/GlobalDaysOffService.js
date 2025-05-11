@@ -1,7 +1,7 @@
 import ApiService from "./ApiService";
 
 // Base endpoint for GLOBAL Days Off API calls
-const GLOBAL_DAYS_OFF_ENDPOINT = "/api/global-days-off";
+const GLOBAL_DAYS_OFF_ENDPOINT = "/global-days-off";
 
 /**
  * Service object for interacting with the GLOBAL Days Off API endpoints.

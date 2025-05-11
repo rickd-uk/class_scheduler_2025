@@ -1,8 +1,8 @@
 import ApiService from './ApiService'
 
 // Define API endpoints (Match routes in server/routes/authRoutes.js)
-const LOGIN_ENDPOINT = '/api/auth/login';
-const REGISTER_ENDPOINT = '/api/auth/register';
+const LOGIN_ENDPOINT = '/auth/login';
+const REGISTER_ENDPOINT = '/auth/register';
 // const ME_ENDPOINT = '/api/auth/me'; // Keep if needed later
 // const LOGOUT_ENDPOINT = '/api/auth/logout'; // Keep if needed later
 

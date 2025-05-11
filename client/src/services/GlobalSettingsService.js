@@ -1,6 +1,6 @@
 import ApiService from "./ApiService";
 
-const ENDPOINT = "/api/global-settings";
+const ENDPOINT = "/global-settings";
 
 /**
  * Service for interacting with /api/global-settings.

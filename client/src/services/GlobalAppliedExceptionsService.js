@@ -1,7 +1,7 @@
 import ApiService from "./ApiService";
 
 // Base endpoint for GLOBAL Applied Exception API calls
-const GLOBAL_APPLIED_EXCEPTIONS_ENDPOINT = "/api/global-applied-exceptions";
+const GLOBAL_APPLIED_EXCEPTIONS_ENDPOINT = "/global-applied-exceptions";
 
 /**
  * Service object for interacting with the GLOBAL Applied Exception API endpoints.

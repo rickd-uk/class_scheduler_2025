@@ -1,6 +1,6 @@
 import ApiService from './ApiService';
 
-const SCHEDULE_ENDPOINT = '/api/schedule'; // Base endpoint
+const SCHEDULE_ENDPOINT = '/schedule'; // Base endpoint
 
 /**
  * Service object for interacting with the schedule API endpoints.

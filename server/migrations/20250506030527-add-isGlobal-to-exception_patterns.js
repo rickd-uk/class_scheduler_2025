@@ -2,23 +2,17 @@
 "use strict";
 
 module.exports = {
-  async up(queryInterface, Sequelize) {
+  async up (queryInterface, Sequelize) {
     const transaction = await queryInterface.sequelize.transaction();
     const tableName = "exception_patterns";
     const columnName = "isGlobal";
 
     try {
-      console.log(
-        `[Migration 20250506030527] Describing table ${tableName}...`,
-      );
-      const tableDescription = await queryInterface.describeTable(tableName, {
-        transaction,
-      });
+      console.log(`[Migration 20250506030527] Describing table ${tableName}...`);
+      const tableDescription = await queryInterface.describeTable(tableName, { transaction });
 
       if (!tableDescription[columnName]) {
-        console.log(
-          `[Migration 20250506030527] Column ${columnName} does not exist in ${tableName}. Adding it...`,
-        );
+        console.log(`[Migration 20250506030527] Column ${columnName} does not exist in ${tableName}. Adding it...`);
         await queryInterface.addColumn(
           tableName,
           columnName,
@@ -27,15 +21,11 @@ module.exports = {
             allowNull: false,
             defaultValue: false,
           },
-          { transaction },
+          { transaction }
         );
-        console.log(
-          `[Migration 20250506030527] Column ${columnName} added to ${tableName}.`,
-        );
+        console.log(`[Migration 20250506030527] Column ${columnName} added to ${tableName}.`);
       } else {
-        console.log(
-          `[Migration 20250506030527] Column ${columnName} already exists in ${tableName}. Skipping add.`,
-        );
+        console.log(`[Migration 20250506030527] Column ${columnName} already exists in ${tableName}. Skipping add.`);
       }
 
       await transaction.commit();
@@ -47,19 +37,15 @@ module.exports = {
     }
   },
 
-  async down(queryInterface, Sequelize) {
+  async down (queryInterface, Sequelize) {
     const transaction = await queryInterface.sequelize.transaction();
     const tableName = "exception_patterns";
     const columnName = "isGlobal";
 
     try {
-      console.log(
-        `[Migration 20250506030527] Attempting to remove column ${columnName} from ${tableName}...`,
-      );
+      console.log(`[Migration 20250506030527] Attempting to remove column ${columnName} from ${tableName}...`);
       await queryInterface.removeColumn(tableName, columnName, { transaction });
-      console.log(
-        `[Migration 20250506030527] Column ${columnName} removed from ${tableName} (if it existed).`,
-      );
+      console.log(`[Migration 20250506030527] Column ${columnName} removed from ${tableName} (if it existed).`);
 
       await transaction.commit();
       console.log("[Migration 20250506030527] Down migration successful.");
@@ -70,3 +56,4 @@ module.exports = {
     }
   },
 };
+

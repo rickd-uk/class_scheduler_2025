@@ -1,27 +1,23 @@
-import { defineConfig } from 'vite'
-import vue from '@vitejs/plugin-vue'
-import path from 'path' // Import path module
+// client/vite.config.js
+import { defineConfig } from "vite";
+import vue from "@vitejs/plugin-vue";
 
-// https://vitejs.dev/config/
 export default defineConfig({
   plugins: [vue()],
-  resolve: {
-    alias: {
-      // Optional: Setup alias for easier imports
-      '@': path.resolve(__dirname, './src'),
+  server: {
+    port: 5173, // Your client's dev port
+    proxy: {
+      // Requests to /api/... will be forwarded to http://localhost:3000/api/...
+      "/api": {
+        target: "http://localhost:3000", // Your backend server address
+        changeOrigin: true, // Important for proper proxying
+        secure: false, // Set to false if your backend is HTTP (not HTTPS)
+        // ws: true,        // If you use WebSockets
+        // rewrite: (path) => path.replace(/^\/api/, '/api') // Usually not needed if your backend also expects /api
+        // The key is that the final request to the backend should be http://localhost:3000/api/your-endpoint
+        // If your backend does NOT expect /api (e.g., it listens for /classes directly),
+        // then you would use: rewrite: (path) => path.replace(/^\/api/, '')
+      },
     },
   },
-  server: {
-    // Optional: configure server port if needed
-    // port: 8080,
-    // Optional: proxy API requests (useful if frontend/backend are on different ports during dev)
-    // proxy: {
-    //   '/api': {
-    //     target: 'http://localhost:3000', // Your backend API URL
-    //     changeOrigin: true,
-    //     rewrite: (path) => path.replace(/^\/api/, '') // Optional: remove /api prefix if backend doesn't expect it
-    //   }
-    // }
-  },
-})
-
+});
