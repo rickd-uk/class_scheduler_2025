@@ -36,13 +36,24 @@ import { useStore } from 'vuex';
 
 const store = useStore();
 
+const isAdminUser = computed(() => !!store.getters['auth/currentUser']?.isAdmin)
+
 // --- Component State ---
 const deletingPatternId = ref(null); // Tracks ID of pattern being deleted for UI feedback
 const deleteError = ref(null); // Stores errors related to deleting
 
 // --- Store State ---
 // Computed properties to get data from the exceptionPatterns store module
-const patterns = computed(() => store.getters['exceptionPatterns/allPatterns']);
+//const patterns = computed(() => store.getters['exceptionPatterns/personalPatterns']);
+
+const patterns = computed(() => {
+  return isAdminUser.value
+    // admins get everything (global + personal)
+    ? store.getters['exceptionPatterns/allPatterns']
+    // everyone else only their own non-global ones
+    : store.getters['exceptionPatterns/personalPatterns']
+})
+
 const isLoading = computed(() => store.getters['exceptionPatterns/isLoading']);
 const error = computed(() => store.getters['exceptionPatterns/error']);
 
