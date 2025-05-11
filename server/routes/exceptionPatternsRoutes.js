@@ -1,5 +1,8 @@
 const express = require("express");
+const { Op } = require("sequelize");
 const { ExceptionPattern } = require("../models");
+const authenticateToken = require("../middleware/authenticateToken");
+const isAdmin = require("../middleware/isAdmin");
 const router = express.Router();
 
 // GET all patterns for the user
@@ -7,7 +10,9 @@ router.get("/", async (req, res) => {
   const userId = req.user.id;
   try {
     const patterns = await ExceptionPattern.findAll({
-      where: { userId },
+      where: {
+        [Op.or]: [{ userId }, { isGlobal: true }],
+      },
       order: [["name", "ASC"]],
     });
     res.status(200).json(patterns);
@@ -20,7 +25,7 @@ router.get("/", async (req, res) => {
 });
 
 // POST a new pattern
-router.post("/", async (req, res) => {
+router.post("/", authenticateToken, isAdmin, async (req, res) => {
   const userId = req.user.id;
   const { name, patternData } = req.body;
   if (!name || !patternData) {
@@ -34,6 +39,7 @@ router.post("/", async (req, res) => {
       name,
       patternData,
       userId,
+      isGlobal: true,
     });
     res.status(201).json(newPattern);
   } catch (error) {
@@ -50,7 +56,7 @@ router.post("/", async (req, res) => {
 });
 
 // PUT (Update) an existing pattern
-router.put("/:id", async (req, res) => {
+router.put("/:id", authenticateToken, isAdmin, async (req, res) => {
   const userId = req.user.id;
   const patternId = req.params.id;
   const { name, patternData } = req.body;
@@ -87,7 +93,7 @@ router.put("/:id", async (req, res) => {
 });
 
 // DELETE a pattern
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", authenticateToken, isAdmin, async (req, res) => {
   const userId = req.user.id;
   const patternId = req.params.id;
   try {
