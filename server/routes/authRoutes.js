@@ -10,19 +10,22 @@ router.post("/register", async (req, res, next) => {
   const { username, email, password } = req.body;
 
   // Basic validation
-  if (!username || !email || !password) {
+  if (!username || !password) {
     return res
       .status(400)
-      .json({ message: "Username, email, and password are required." });
+      .json({ message: "Username and password are required." });
   }
   // Add more validation as needed (e.g., password complexity)
 
   try {
     // Check if email or username already exists
-    const existingUser = await User.findOne({ where: { email: email } });
-    if (existingUser) {
-      return res.status(409).json({ message: "Email already in use." });
+    if (email) {
+      const existingUser = await User.findOne({ where: { email: email } });
+      if (existingUser) {
+        return res.status(409).json({ message: "Email already in use." });
+      }
     }
+
     const existingUsername = await User.findOne({
       where: { username: username },
     });

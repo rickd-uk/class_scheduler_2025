@@ -1,11 +1,10 @@
-import ApiService from './ApiService'
+import ApiService from "./ApiService";
 
 // Define API endpoints (Match routes in server/routes/authRoutes.js)
-const LOGIN_ENDPOINT = '/auth/login';
-const REGISTER_ENDPOINT = '/auth/register';
+const LOGIN_ENDPOINT = "/auth/login";
+const REGISTER_ENDPOINT = "/auth/register";
 // const ME_ENDPOINT = '/api/auth/me'; // Keep if needed later
 // const LOGOUT_ENDPOINT = '/api/auth/logout'; // Keep if needed later
-
 
 const AuthService = {
   login(credentials) {
@@ -17,8 +16,10 @@ const AuthService = {
 
   register(userData) {
     // userData should be an object like { username: '...', email: '...', password: '...' }
-     console.log(`AuthService: Sending register request to ${REGISTER_ENDPOINT}`);
-     // Use the actual ApiService post method
+    console.log(
+      `AuthService: Sending register request to ${REGISTER_ENDPOINT}`,
+    );
+    // Use the actual ApiService post method
     return ApiService.post(REGISTER_ENDPOINT, userData);
   },
 
@@ -39,7 +40,6 @@ const AuthService = {
   //       return Promise.resolve(); // Resolve anyway
   //    });
   // }
-}
+};
 
-export default AuthService
-
+export default AuthService;
