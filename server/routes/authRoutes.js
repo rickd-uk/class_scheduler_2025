@@ -19,6 +19,15 @@ router.post("/register", async (req, res, next) => {
 
   try {
     // Check if email or username already exists
+    const globalSettings = await GlobalSetting.findOne();
+
+    if (!globalSettings || globalSettings.allowRegistration === false) {
+      // Explicitly check for false
+      return res.status(403).json({
+        message: "Registration is currently disabled by the administrator.",
+      });
+    }
+
     if (email) {
       const existingUser = await User.findOne({ where: { email: email } });
       if (existingUser) {

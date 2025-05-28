@@ -6,7 +6,14 @@ const isAdmin = require("../middleware/isAdmin");
 const router = express.Router();
 
 // GET all patterns for the user
-router.get("/", async (req, res) => {
+router.get("/", authenticateToken, async (req, res) => {
+  if (!req.user || typeof req.user.id === "undefined") {
+    // This case should ideally be handled by authenticateToken sending a 401/403
+    // But as a safeguard:
+    return res
+      .status(401)
+      .json({ message: "User not authenticated or user ID missing." });
+  }
   const userId = req.user.id;
 
   try {
@@ -18,6 +25,7 @@ router.get("/", async (req, res) => {
     });
     res.status(200).json(patterns);
   } catch (error) {
+    console.error("Error fetching exception patterns:", error);
     res.status(500).json({
       message: "Error fetching exception patterns",
       error: error.message,

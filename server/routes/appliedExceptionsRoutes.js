@@ -1,10 +1,11 @@
 const express = require("express");
 const { AppliedException, ExceptionPattern } = require("../models");
 const router = express.Router();
+const authenticateToken = require("../middleware/authenticateToken");
 
 // --- GET /api/applied-exceptions ---
 // Fetches all applied exceptions for the logged-in user
-router.get("/", async (req, res) => {
+router.get("/", authenticateToken, async (req, res) => {
   const userId = req.user.id; // Get user ID from token payload
   try {
     console.log(
@@ -40,7 +41,7 @@ router.get("/", async (req, res) => {
 
 // GET applied exception for a specific date
 // e.g., GET /api/applied-exceptions/2025-05-15
-router.get("/:date", async (req, res) => {
+router.get("/:date", authenticateToken, async (req, res) => {
   const userId = req.user.id;
   const { date } = req.params;
   if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
@@ -65,7 +66,7 @@ router.get("/:date", async (req, res) => {
 
 // POST to apply an exception pattern or mark day off for a date
 // Body: { date: 'YYYY-MM-DD', exceptionPatternId: id | null, isDayOff: boolean, reason: string | null, color: string | null }
-router.post("/", async (req, res) => {
+router.post("/", authenticateToken, async (req, res) => {
   const userId = req.user.id;
   const { date, exceptionPatternId, isDayOff, reason, color } = req.body;
 
@@ -153,7 +154,7 @@ router.post("/", async (req, res) => {
 });
 
 // DELETE applied exception for a specific date
-router.delete("/:date", async (req, res) => {
+router.delete("/:date", authenticateToken, async (req, res) => {
   const userId = req.user.id;
   const { date } = req.params;
   if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {

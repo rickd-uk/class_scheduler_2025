@@ -28,6 +28,32 @@ const GlobalSettingsService = {
     console.log(`GlobalSettingsService: PUT ${ENDPOINT}`);
     return ApiService.put(ENDPOINT, payload);
   },
+
+  /**
+   * Fetch the current registration status.
+   * Assumes a dedicated endpoint like GET /api/global-settings/registration-status
+   * @returns {Promise<AxiosResponse<{ allowRegistration: boolean }>>}
+   */
+  getRegistrationStatus() {
+    const registrationStatusEndpoint = `${ENDPOINT}/registration-status`;
+    console.log(`GlobalSettingsService: GET ${registrationStatusEndpoint}`);
+    return ApiService.get(registrationStatusEndpoint);
+  },
+
+  /**
+   * Update the registration status (admin only).
+   * Assumes a dedicated endpoint like PUT /api/global-settings/registration-status
+   * @param {{ allowRegistration: boolean }} payload
+   * @returns {Promise<AxiosResponse<{ message: string, allowRegistration: boolean }>>}
+   */
+  updateRegistrationStatus(payload) {
+    const registrationStatusEndpoint = `${ENDPOINT}/registration-status`;
+    console.log(
+      `GlobalSettingsService: PUT ${registrationStatusEndpoint} with payload:`,
+      payload,
+    );
+    return ApiService.put(registrationStatusEndpoint, payload);
+  },
 };
 
 export default GlobalSettingsService;

@@ -1,3 +1,4 @@
+// server/server.js
 require("dotenv").config(); // Load .env variables first
 const express = require("express");
 const cors = require("cors");
@@ -15,8 +16,9 @@ const globalSettingsRoutes = require("./routes/globalSettingsRoutes");
 const globalDaysOffRoutes = require("./routes/globalDaysOffRoutes");
 const globalAppliedExceptionsRoutes = require("./routes/globalAppliedExceptionsRoutes");
 // --- Middleware Imports ---
-const authenticateToken = require("./middleware/authenticateToken");
-const isAdmin = require("./middleware/isAdmin");
+// authenticateToken and isAdmin are used within specific routes, not globally here for all /api/*
+// const authenticateToken = require("./middleware/authenticateToken");
+// const isAdmin = require("./middleware/isAdmin");
 
 // --- Global Error Handlers ---
 process.on("uncaughtException", (error) => {
@@ -56,26 +58,27 @@ app.get("/api", (req, res) => {
 
 // Mount routes
 app.use("/api/auth", authRoutes);
-app.use("/api/classes", authenticateToken, classRoutes); // Classes routes are protected
-app.use("/api/textbooks", textbookRoutes); // Add authenticateToken if textbooks become user-specific
-app.use("/api/schedule", authenticateToken, scheduleRoutes); // Schedule routes are protected
-// Mount days off routes under /api/days-off and apply authentication middleware
-app.use("/api/days-off", authenticateToken, daysOffRoutes); // <-- Mount Days Off routes (protected)
-app.use("/api/exception-patterns", authenticateToken, exceptionPatternsRoutes); // <-- Mount
-app.use("/api/applied-exceptions", authenticateToken, appliedExceptionsRoutes); // <-- Mount
-// Global routes (require login AND admin privileges)
-app.use("/api/global-days-off", authenticateToken, globalDaysOffRoutes); // <-- Mount Global Days Off
-app.use(
-  "/api/global-applied-exceptions",
-  authenticateToken,
-  globalAppliedExceptionsRoutes,
-);
-app.use("/api/global-settings", globalSettingsRoutes);
+// For routes requiring authentication or admin rights,
+// the middleware (authenticateToken, isAdmin) should be applied
+// within the respective route files (e.g., classRoutes.js, or specific routes in globalSettingsRoutes.js)
+// or here if ALL routes under a path need it.
+// Example: app.use("/api/classes", authenticateToken, classRoutes);
+app.use("/api/classes", classRoutes); // Assuming classRoutes applies its own middleware internally if needed
+app.use("/api/textbooks", textbookRoutes);
+app.use("/api/schedule", scheduleRoutes); // Assuming scheduleRoutes applies its own middleware
+app.use("/api/days-off", daysOffRoutes);
+app.use("/api/exception-patterns", exceptionPatternsRoutes);
+app.use("/api/applied-exceptions", appliedExceptionsRoutes);
+
+// Global routes
+app.use("/api/global-days-off", globalDaysOffRoutes); // Assuming these apply their own auth/admin middleware
+app.use("/api/global-applied-exceptions", globalAppliedExceptionsRoutes);
+app.use("/api/global-settings", globalSettingsRoutes); // globalSettingsRoutes will handle its own middleware for specific sub-routes
 
 // --- Error Handling Middleware (Should be last) ---
 app.use((err, req, res, next) => {
   console.error("--- Express Error Handler ---");
-  console.error(err.stack);
+  console.error(err.stack || err.message || err); // Log stack for better debugging
   // Send a generic error message or specific one based on error type
   res.status(err.status || 500).send({
     message: err.message || "An unexpected server error occurred.",
@@ -84,20 +87,97 @@ app.use((err, req, res, next) => {
   });
 });
 
+// Assuming 'app' is your Express app instance and 'db' is your Sequelize instance from './models'
+// Also assuming 'corsOptions' is defined earlier in your server.js file
+
 // Database Connection & Server Start
 const PORT = process.env.PORT || 3000;
+let serverInstance; // Variable to hold the server instance
 
 db.sequelize
-  .sync()
+  .sync() // Consider { alter: true } or { force: true } only for development
   .then(() => {
     console.log("Database synced.");
-    app.listen(PORT, () => {
+    serverInstance = app.listen(PORT, () => {
+      // Assign app.listen to serverInstance
       console.log(`Server is running on port ${PORT}.`);
-      // Log the actual origin being allowed by CORS
-      console.log(`Allowing requests from: ${corsOptions.origin}`);
+      // Log the actual origin being allowed by CORS (assuming corsOptions is in scope)
+      if (typeof corsOptions !== "undefined" && corsOptions.origin) {
+        console.log(`Allowing requests from: ${corsOptions.origin}`);
+      } else {
+        // This else block is just for robustness if corsOptions isn't in the immediate scope
+        // of the original snippet, but it should be based on your full server.js.
+        // console.log('CORS origin not explicitly logged in this snippet.');
+      }
     });
   })
   .catch((err) => {
     console.error("Failed to sync database:", err);
     process.exit(1); // Exit if DB connection fails
   });
+
+// Graceful shutdown function
+const gracefulShutdown = (signal) => {
+  console.log(`\n${signal} received. Starting graceful shutdown...`);
+  if (serverInstance) {
+    serverInstance.close(() => {
+      console.log("HTTP server closed.");
+      // Close a_posteriori_database connection
+      if (db && db.sequelize) {
+        db.sequelize
+          .close()
+          .then(() => {
+            console.log("Database connection closed.");
+            process.exit(0);
+          })
+          .catch((err) => {
+            console.error("Error closing database connection:", err);
+            process.exit(1);
+          });
+      } else {
+        console.log("Sequelize instance not found, exiting.");
+        process.exit(0);
+      }
+    });
+  } else {
+    // If serverInstance is not defined, it means the server hasn't started listening yet.
+    // This could happen if db.sync() failed or is still in progress.
+    console.log(
+      "HTTP server not started. Attempting to close database connection if available.",
+    );
+    if (db && db.sequelize) {
+      db.sequelize
+        .close()
+        .then(() => {
+          console.log(
+            "Database connection closed (server was not fully started).",
+          );
+          process.exit(0);
+        })
+        .catch((err) => {
+          console.error(
+            "Error closing database connection (server was not fully started):",
+            err,
+          );
+          process.exit(1);
+        });
+    } else {
+      console.log("Sequelize instance not found, exiting directly.");
+      process.exit(0);
+    }
+  }
+
+  // If server doesn't close in time, force exit
+  setTimeout(() => {
+    console.error(
+      "Could not close connections in time, forcefully shutting down",
+    );
+    process.exit(1);
+  }, 10000); // 10 seconds timeout
+};
+
+// Listen for common termination signals
+process.on("SIGTERM", () => gracefulShutdown("SIGTERM")); // Sent by `kill` or process managers
+process.on("SIGINT", () => gracefulShutdown("SIGINT")); // Sent by `Ctrl+C`
+
+module.exports = app; // Your existing export

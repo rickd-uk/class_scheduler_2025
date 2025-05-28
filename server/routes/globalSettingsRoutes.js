@@ -5,6 +5,66 @@ const authenticateToken = require("../middleware/authenticateToken"); // Needed 
 const isAdmin = require("../middleware/isAdmin"); // Needed for PUT
 const router = express.Router();
 
+// GET current registration status
+router.get("/registration-status", authenticateToken, async (req, res) => {
+  try {
+    // Assuming a single row or a known way to identify the correct setting row
+    const setting = await GlobalSetting.findOne({
+      // attributes: ['allowRegistration']
+      // Add a WHERE clause if needed, e.g., where: { id: 1 }
+    });
+    if (!setting) {
+      // If no setting found, default to a sensible value or create one
+      return res.json({ allowRegistration: true }); // Or false
+    }
+    res.json({ allowRegistration: setting.allowRegistration });
+  } catch (error) {
+    res.status(500).json({
+      message: "Error fetching registration status",
+      error: error.message,
+    });
+  }
+});
+
+// PUT to update registration status (Admin only)
+router.put(
+  "/registration-status",
+  authenticateToken,
+  isAdmin,
+  async (req, res) => {
+    const { allowRegistration } = req.body;
+    if (typeof allowRegistration !== "boolean") {
+      return res.status(400).json({
+        message: "Invalid value for allowRegistration. Must be true or false.",
+      });
+    }
+    try {
+      // Assuming a single row or a known way to identify the correct setting row
+      let setting = await GlobalSetting.findOne({
+        // Add a WHERE clause if needed
+      });
+      if (setting) {
+        setting.allowRegistration = allowRegistration;
+        await setting.save();
+      } else {
+        // Optionally create the setting if it doesn't exist
+        setting = await GlobalSetting.create({
+          allowRegistration /* other default fields if necessary */,
+        });
+      }
+      res.json({
+        message: "Registration status updated successfully.",
+        allowRegistration: setting.allowRegistration,
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: "Error updating registration status",
+        error: error.message,
+      });
+    }
+  },
+);
+
 // GET /api/global-settings - Fetch the current settings (accessible to all logged-in users)
 router.get("/", authenticateToken, async (req, res) => {
   try {

@@ -1,10 +1,11 @@
 const express = require("express");
 const { Class, User, Textbook } = require("../models");
+const authenticateToken = require("../middleware/authenticateToken");
 
 const router = express.Router();
 
 // --- GET All Classes for the logged-in user ---
-router.get("/", async (req, res) => {
+router.get("/", authenticateToken, async (req, res) => {
   const userId = req.user.id;
   try {
     const classes = await Class.findAll({
