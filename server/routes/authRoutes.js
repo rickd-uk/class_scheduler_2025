@@ -1,7 +1,7 @@
 const express = require("express");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const { User } = require("../models"); // Assuming User model is in models/index.js
+const { User, GlobalSetting } = require("../models"); // Assuming User model is in models/index.js
 
 const router = express.Router();
 

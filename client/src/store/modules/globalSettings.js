@@ -4,99 +4,168 @@ import GlobalSettingsService from "../../services/GlobalSettingsService";
 export default {
   namespaced: true,
 
-  // --- State ---
   state: () => ({
     applyGlobalDaysOff: false,
     applyGlobalExceptions: false,
-    isLoading: false,
-    allowRegistration: false, // Default initial state
-    isLoadingRegistrationStatus: false,
-    error: null,
+    allowRegistration: false, // This will be populated by fetchGlobalSettings
+
+    isLoading: false, // Unified: true when fetching initial settings
+    isUpdating: false, // Unified: true during any update operation
+    error: null, // Unified: stores any error message
   }),
 
-  // --- Getters ---
   getters: {
-    shouldApplyGlobalDaysOff: (s) => s.applyGlobalDaysOff,
-    shouldApplyGlobalExceptions: (s) => s.applyGlobalExceptions,
-    isRegistrationAllowed: (state) => state.allowRegistration,
-    isLoadingRegistrationStatus: (s) => s.isLoadingRegistrationStatus, // Specific loading
-    isLoading: (s) => s.isLoading,
-    error: (s) => s.error,
+    shouldApplyGlobalDaysOff: (state) => state.applyGlobalDaysOff,
+    shouldApplyGlobalExceptions: (state) => state.applyGlobalExceptions,
+    isRegistrationAllowed: (state) => {
+      // Log when this getter is accessed and what it returns
+      console.log(
+        "[Vuex Getter] globalSettings/isRegistrationAllowed accessed. Current state.allowRegistration:",
+        state.allowRegistration,
+      );
+      return state.allowRegistration; // Only one return statement needed
+    },
+    isLoading: (state) => state.isLoading, // For GlobalSettingsPanel initial load
+    isUpdating: (state) => state.isUpdating, // For GlobalSettingsPanel to disable toggles
+    error: (state) => state.error, // For GlobalSettingsPanel to display errors
   },
 
-  // --- Mutations ---
   mutations: {
-    SET_SETTINGS(state, settings) {
-      state.applyGlobalDaysOff = !!settings.applyGlobalDaysOff;
-      state.applyGlobalExceptions = !!settings.applyGlobalExceptions;
+    SET_ALL_GLOBAL_SETTINGS(state, settingsPayload) {
+      // settingsPayload is the object from GET /api/global-settings
+      console.log(
+        "[Vuex Mutation] SET_ALL_GLOBAL_SETTINGS. Payload:",
+        settingsPayload,
+      );
+      console.log(
+        "[Vuex Mutation] state.allowRegistration BEFORE:",
+        state.allowRegistration,
+      );
+      state.applyGlobalDaysOff = !!settingsPayload.applyGlobalDaysOff;
+      state.applyGlobalExceptions = !!settingsPayload.applyGlobalExceptions;
+      state.allowRegistration = !!settingsPayload.allowRegistration; // Important: ensure this is set
+      console.log(
+        "[Vuex Mutation] state.allowRegistration AFTER:",
+        state.allowRegistration,
+      );
+    },
+    // Use this if an update operation (like for registration) returns only a partial update
+    UPDATE_SPECIFIC_SETTING_ALLOW_REGISTRATION(state, allow) {
+      console.log(
+        "[Vuex Mutation] UPDATE_SPECIFIC_SETTING_ALLOW_REGISTRATION. Payload (allow):",
+        allow,
+      );
+      console.log(
+        "[Vuex Mutation] state.allowRegistration BEFORE:",
+        state.allowRegistration,
+      );
+      state.allowRegistration = !!allow;
+      console.log(
+        "[Vuex Mutation] state.allowRegistration AFTER:",
+        state.allowRegistration,
+      );
     },
     SET_LOADING(state, val) {
       state.isLoading = val;
     },
+    SET_UPDATING(state, val) {
+      state.isUpdating = val;
+    },
     SET_ERROR(state, err) {
       state.error = err;
     },
-
-    // --- Mutations for registration status ---
-    SET_REGISTRATION_STATUS(state, status) {
-      state.allowRegistration = !!status; // Ensure it's a boolean
-    },
-    SET_LOADING_REGISTRATION_STATUS(state, isLoading) {
-      state.isLoadingRegistrationStatus = isLoading;
-    },
   },
 
-  // --- Actions ---
   actions: {
-    async fetchSettings({ commit }) {
+    // This action should be called by GlobalSettingsPanel.vue onMounted
+    async fetchGlobalSettings({ commit }) {
+      // Added console.log from your version
+      console.log(
+        "[Vuex Action] globalSettings/fetchGlobalSettings dispatched",
+      );
       commit("SET_LOADING", true);
+      commit("SET_ERROR", null);
       try {
-        const { data } = await GlobalSettingsService.get();
-        commit("SET_SETTINGS", data);
-        commit("SET_ERROR", null);
+        // Ensure GlobalSettingsService.get() hits GET /api/global-settings
+        // and returns { applyGlobalDaysOff, applyGlobalExceptions, allowRegistration, ... }
+        const { data } = await GlobalSettingsService.get(); // Corrected to .get()
+        // Added console.log from your version
+        console.log(
+          "[Vuex Action] fetchGlobalSettings - API response data:",
+          data,
+        );
+        commit("SET_ALL_GLOBAL_SETTINGS", data);
       } catch (err) {
-        commit("SET_ERROR", err);
-        throw err;
+        const errorMessage =
+          err.response?.data?.message ||
+          err.message ||
+          "Failed to fetch global settings";
+        commit("SET_ERROR", errorMessage);
+        console.error("Error fetching global settings:", err);
       } finally {
         commit("SET_LOADING", false);
       }
     },
-    async updateSettings({ commit }, payload) {
-      commit("SET_LOADING", true);
+
+    // For updating applyGlobalDaysOff and applyGlobalExceptions
+    // payload: { applyGlobalDaysOff, applyGlobalExceptions }
+    async updateGeneralSettings({ commit, dispatch }, payload) {
+      // Added console.log for consistency if desired
+      // console.log('[Vuex Action] globalSettings/updateGeneralSettings dispatched with payload:', payload);
+      commit("SET_UPDATING", true);
+      commit("SET_ERROR", null);
       try {
-        const { data } = await GlobalSettingsService.update(payload);
-        commit("SET_SETTINGS", data);
-        commit("SET_ERROR", null);
+        // Assumes GlobalSettingsService.update() hits PUT /api/global-settings
+        // and the backend returns the full updated global settings object.
+        const { data } = await GlobalSettingsService.update(payload); // Corrected to .update()
+        // console.log('[Vuex Action] updateGeneralSettings - API response data:', data);
+        commit("SET_ALL_GLOBAL_SETTINGS", data); // Update the entire state from response
       } catch (err) {
-        commit("SET_ERROR", err);
+        const errorMessage =
+          err.response?.data?.message ||
+          err.message ||
+          "Failed to update general settings";
+        commit("SET_ERROR", errorMessage);
+        await dispatch("fetchGlobalSettings");
         throw err;
       } finally {
-        commit("SET_LOADING", false);
+        commit("SET_UPDATING", false);
       }
     },
-    async fetchRegistrationStatus({ commit }) {
-      commit("setLoadingRegistrationStatus", true);
+
+    // For updating allowRegistration
+    // newStatus is a boolean
+    async updateAllowRegistration({ commit, dispatch }, newStatus) {
+      // Added console.log from your version
+      console.log(
+        "[Vuex Action] globalSettings/updateAllowRegistration dispatched with newStatus:",
+        newStatus,
+      );
+      commit("SET_UPDATING", true);
+      commit("SET_ERROR", null);
       try {
-        const response = await GlobalSettingsService.getRegistrationStatus();
-        commit("setRegistrationStatus", response.data.allowRegistration);
-      } catch (error) {
-        console.error("Error fetching registration status:", error);
-        // Handle error appropriately, maybe commit an error state
-      } finally {
-        commit("setLoadingRegistrationStatus", false);
-      }
-    },
-    async updateRegistrationStatus({ commit }, newStatus) {
-      // newStatus is a boolean
-      try {
-        const response = await GlobalSettingsService.updateRegistrationStatus({
+        const { data } = await GlobalSettingsService.updateRegistrationStatus({
           allowRegistration: newStatus,
         });
-        commit("setRegistrationStatus", response.data.allowRegistration);
+        // Added console.log from your version
+        console.log(
+          "[Vuex Action] updateAllowRegistration - API response data:",
+          data,
+        );
+        commit(
+          "UPDATE_SPECIFIC_SETTING_ALLOW_REGISTRATION",
+          data.allowRegistration,
+        );
       } catch (error) {
-        console.error("Error updating registration status:", error);
-        // Handle error appropriately
-        throw error; // Re-throw for component to handle
+        const errorMessage =
+          error.response?.data?.message ||
+          error.message ||
+          "Error updating registration status";
+        commit("SET_ERROR", errorMessage);
+        await dispatch("fetchGlobalSettings");
+        throw error;
+      } finally {
+        commit("SET_UPDATING", false);
       }
     },
   },

@@ -1,37 +1,53 @@
 <template>
   <CollapsiblePanel>
-    <!-- just the centered title -->
     <template #header>
       <h3 class="panel-title">Global Settings</h3>
     </template>
 
-    <!-- no actions slot, so nothing shows on the right -->
-
-    <!-- everything else in the body -->
     <template #body>
       <div class="panel-body">
-        <div v-if="isLoading" class="loading">Loading settings...</div>
-        <div v-else-if="error" class="error-message">{{ error }}</div>
+        <div v-if="isLoadingAll" class="loading">Loading settings...</div>
+        <div v-else-if="errorAll" class="error-message">{{ errorAll }}</div>
         <div v-else class="settings-controls">
           <div class="settings-toggles">
             <div class="form-check form-switch">
               <input class="form-check-input" type="checkbox" role="switch" id="applyGlobalDaysOffToggle"
-                :checked="applyGlobalDaysOff" @change="updateSetting('applyGlobalDaysOff', $event.target.checked)"
-                :disabled="isUpdating" />
+                :checked="applyGlobalDaysOff"
+                @change="updateGeneralSetting('applyGlobalDaysOff', $event.target.checked)"
+                :disabled="isUpdatingGeneral" />
               <label class="form-check-label" for="applyGlobalDaysOffToggle">
                 Apply Global Days Off
               </label>
             </div>
+
             <div class="form-check form-switch">
               <input class="form-check-input" type="checkbox" role="switch" id="applyGlobalExceptionsToggle"
-                :checked="applyGlobalExceptions" @change="updateSetting('applyGlobalExceptions', $event.target.checked)"
-                :disabled="isUpdating" />
+                :checked="applyGlobalExceptions"
+                @change="updateGeneralSetting('applyGlobalExceptions', $event.target.checked)"
+                :disabled="isUpdatingGeneral" />
               <label class="form-check-label" for="applyGlobalExceptionsToggle">
                 Apply Global Schedule Exceptions
               </label>
             </div>
-            <p v-if="updateError" class="error-message small-error mt-2">
-              {{ updateError }}
+
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" role="switch" id="allowRegistrationToggle"
+                :checked="isRegistrationAllowed" @change="toggleRegistrationSetting"
+                :disabled="isUpdatingRegistration" />
+              <label class="form-check-label" for="allowRegistrationToggle">
+                Allow New User Registrations
+              </label>
+            </div>
+            <div v-if="isUpdatingGeneral || isUpdatingRegistration" class="small-loading">(Saving...)</div>
+
+            <p v-if="updateErrorGeneral" class="error-message small-error mt-2">
+              {{ updateErrorGeneral }}
+            </p>
+            <p v-if="updateErrorRegistration" class="error-message small-error mt-2">
+              {{ updateErrorRegistration }}
+            </p>
+            <p v-if="successMessage" class="success-message small-success mt-2">
+              {{ successMessage }}
             </p>
           </div>
         </div>
@@ -44,125 +60,99 @@
   </CollapsiblePanel>
 </template>
 
-
 <script setup>
-// Import necessary functions from Vue and Vuex
 import { ref, computed, onMounted } from 'vue';
 import { useStore } from 'vuex';
 import CollapsiblePanel from './CollapsiblePanel.vue';
-// Initialize Vuex store
+
 const store = useStore();
 
 // --- Component State ---
-// Local state to track if an update operation (saving toggle state) is in progress
-const isUpdating = ref(false);
-// Local state to store any errors that occur during the update operation
-const updateError = ref(null);
+// For disabling controls during updates, assuming your Vuex store has an 'isUpdating' getter
+const isUpdatingGeneral = computed(() => store.getters['globalSettings/isUpdating']);
+const isUpdatingRegistration = computed(() => store.getters['globalSettings/isUpdating']);
+
+const updateErrorGeneral = ref(null);
+const updateErrorRegistration = ref(null);
+
+const successMessage = ref('');
 
 // --- Store State (Computed Properties) ---
-// Get the global settings toggle values reactively from the store getters
+
 const applyGlobalDaysOff = computed(() => store.getters['globalSettings/shouldApplyGlobalDaysOff']);
 const applyGlobalExceptions = computed(() => store.getters['globalSettings/shouldApplyGlobalExceptions']);
-// Get loading and error states related to fetching the initial settings
-const isLoading = computed(() => store.getters['globalSettings/isLoading']);
-const error = computed(() => store.getters['globalSettings/error']);
+const isRegistrationAllowed = computed(() => store.getters['globalSettings/isRegistrationAllowed']);
+
+
+// Unified loading/error for fetching all settings initially
+const isLoadingAll = computed(() => store.getters['globalSettings/isLoading']);
+const errorAll = computed(() => store.getters['globalSettings/error']);
+
 
 // --- Methods ---
+const clearMessages = () => {
+  updateErrorGeneral.value = null;
+  updateErrorRegistration.value = null;
+  successMessage.value = '';
+};
+
+const showSuccessTemporary = (message) => {
+  successMessage.value = message;
+  setTimeout(() => {
+    successMessage.value = '';
+  }, 3000);
+};
 
 /**
- * Dispatches the action to update the global settings when a toggle switch changes.
- * @param {string} settingKey - The key of the setting to update ('applyGlobalDaysOff' or 'applyGlobalExceptions').
- * @param {boolean} value - The new boolean value for the setting from the checkbox event.
+ * Updates general global settings like applyGlobalDaysOff and applyGlobalExceptions.
  */
-const updateSetting = async (settingKey, value) => {
-  isUpdating.value = true; // Set local loading state for the update
-  updateError.value = null; // Clear previous update errors
-  console.log(`Updating global setting: ${settingKey} to ${value}`);
+const updateGeneralSetting = async (settingKey, value) => {
+  // isUpdatingGeneral.value = true;
+  clearMessages();
 
-  // Prepare the payload with the current state of *both* toggles,
-  // overwriting the one that just changed. This ensures the backend
-  // always receives the complete settings object.
   const payload = {
     applyGlobalDaysOff: applyGlobalDaysOff.value,
     applyGlobalExceptions: applyGlobalExceptions.value,
-    [settingKey]: value // Dynamically set the changed key based on the event
+    [settingKey]: value,
   };
 
   try {
-    // Dispatch the action to update settings in the backend and store
-    await store.dispatch('globalSettings/updateSettings', payload);
-    // State updates reactively via the store mutation after API success,
-    // which will update the :checked binding on the input.
-    console.log("Global settings update successful.");
+    await store.dispatch('globalSettings/updateGlobalSettings', payload); // Action for these specific settings
+    showSuccessTemporary('Settings updated successfully.');
   } catch (err) {
-    // Handle errors during the update
-    updateError.value = err.message || 'Failed to update setting.';
-    console.error("Error updating setting, refetching to revert UI potentially...");
-    // Refetch settings on error to ensure UI toggle reverts to actual DB state
-    // This prevents the UI toggle from staying in the wrong state if the save failed.
-    store.dispatch('globalSettings/fetchSettings');
+    updateErrorGeneral.value = err.message || 'Failed to update setting.';
+    // Re-fetch to revert UI if the store doesn't do it automatically on error
+    store.dispatch('globalSettings/fetchGlobalSettings');
   } finally {
-    // Reset local loading state regardless of success/failure
-    isUpdating.value = false;
+    //isUpdatingGeneral.value = false;
   }
 };
 
 /**
- * Opens the modal for managing the list of global days off.
- * Passes a flag to indicate the global context.
+ * Toggles the allowRegistration global setting.
  */
-const manageGlobalDaysOff = () => {
-  console.log("Opening modal to manage GLOBAL days off");
-  // Reuses DayOffEditorModal for adding/editing individual global days off.
-  // A dedicated list management modal might be better for viewing/bulk actions in the future.
-  store.dispatch('ui/openModal', {
-    modalName: 'dayOffEditor', // Reuse the existing modal
-    data: { isGlobal: true } // Pass flag to tell the modal it's for global management
-  });
-  // Provide feedback that full management UI isn't ready yet
-  alert("Management UI for listing/editing multiple Global Days Off not fully implemented yet. Use 'Add Day Off' modal triggered from here to add/edit globally.");
-};
+const toggleRegistrationSetting = async (event) => {
+  // isUpdatingRegistration.value = true;
+  clearMessages();
+  const newValue = event.target.checked;
 
-/**
- * Opens the modal for managing globally applied exception patterns.
- * Passes a flag to indicate the global context.
- */
-const manageGlobalExceptions = () => {
-  console.log("Opening modal to manage GLOBAL applied exceptions");
-  // Reuses DailyExceptionModal for applying patterns globally to a specific date.
-  // A dedicated list management modal might be better in the future.
-  store.dispatch('ui/openModal', {
-    modalName: 'dailyException', // Reuse the existing modal
-    data: { isGlobal: true, date: null, exception: null } // Indicate global context, start with no date selected
-  });
-  alert("Management UI for listing/editing multiple Global Exceptions not fully implemented yet. Use 'Edit Exceptions' modal triggered from here to apply globally.");
-};
-
-
-/**
- * Helper function to format date (example, adjust as needed).
- * Used for potential future display within this panel, currently unused here.
- * @param {string} dateString - Date in 'YYYY-MM-DD' format.
- * @returns {string} Formatted date string.
- */
-const formatDate = (dateString) => {
-  if (!dateString) return '';
   try {
-    const date = new Date(dateString + 'T00:00:00');
-    return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric', weekday: 'short' });
-  } catch (e) { return 'Invalid Date'; }
-}
+    await store.dispatch('globalSettings/updateAllowRegistration', newValue);
+    showSuccessTemporary('Registration status updated successfully.');
+  } catch (error) {
+    updateErrorRegistration.value = error.message || 'Failed to update registration status.';
+    // Revert UI toggle on error by re-fetching state
+    event.target.checked = !newValue; // Optimistic revert, or re-fetch all settings
+    store.dispatch('globalSettings/fetchGlobalSettings');
+  } finally {
+    // isUpdatingRegistration.value = false;
+  }
+};
 
 // --- Lifecycle Hook ---
 onMounted(() => {
-  // Fetch settings on mount if they haven't been loaded yet (e.g., by App.vue)
-  // Check if settings have default values which might indicate they weren't fetched
-  if (applyGlobalDaysOff.value === true && applyGlobalExceptions.value === true && !isLoading.value && !error.value) {
-    // Check if the store indicates loading or error already to avoid redundant fetch
-    // This fetch might be redundant if App.vue reliably fetches on load.
-    // console.log("[GlobalSettingsPanel] Settings seem to be default, potentially fetching again.");
-    // store.dispatch('globalSettings/fetchSettings');
-  }
+  // Fetch all global settings if not already loaded or to ensure freshness
+  store.dispatch('globalSettings/fetchGlobalSettings');
 });
 </script>
 
@@ -170,57 +160,41 @@ onMounted(() => {
 /* Basic styling for the admin panel */
 .admin-panel {
   border-left: 4px solid var(--warning);
-  /* Distinctive border for admin panels */
   margin-top: 1rem;
-  /* Add some space above */
 }
 
 .panel-body {
   padding: 0.5rem 1rem 1rem 1rem;
-  /* Adjust padding */
 }
 
-/* Container for the controls */
 .settings-controls {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  /* Space between sections */
 }
 
-/* Container for the toggle switches */
 .settings-toggles {
   display: flex;
   flex-direction: column;
   gap: 0.8rem;
-  /* Space between toggles */
   margin-bottom: 1rem;
-  /* Space below toggles */
 }
 
-/* Container for the management buttons */
-.management-buttons {
-  display: flex;
-  flex-direction: column;
-  /* Stack buttons vertically */
-  gap: 0.5rem;
-  /* Space between buttons */
-  margin-top: 1rem;
-  /* Space above buttons */
-  padding-top: 1rem;
-  /* Space above buttons */
-  border-top: 1px solid var(--border-color);
-  /* Separator line */
-}
-
-/* Loading and error message styling */
 .loading,
 .error-message,
-.placeholder-content {
-  padding: 1rem;
-  text-align: center;
+.success-message,
+.placeholder-content,
+.small-loading {
+  padding: 0.3rem 0.6rem;
+  font-size: 0.8rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0;
+  text-align: left;
+  /* Align with toggles */
+}
+
+.small-loading {
   color: var(--secondary);
-  font-size: 0.9rem;
 }
 
 .error-message {
@@ -230,34 +204,25 @@ onMounted(() => {
   border-radius: var(--border-radius);
 }
 
-.error-message.small-error {
-  /* Smaller error for toggle feedback */
-  padding: 0.3rem 0.6rem;
-  font-size: 0.8rem;
-  margin-top: 0.5rem;
-  margin-bottom: 0;
-  /* Remove extra margin */
+.success-message {
+  color: green;
+  background-color: #d4edda;
+  border: 1px solid #c3e6cb;
+  border-radius: var(--border-radius);
 }
 
-/* Bootstrap switch styling (ensure Bootstrap CSS is loaded or add custom styles) */
 .form-check.form-switch {
   padding-left: 3em;
-  /* Adjust padding for switch */
   display: flex;
-  /* Align label and switch nicely */
   align-items: center;
 }
 
 .form-check-input {
   width: 2.5em;
-  /* Standard switch width */
   height: 1.25em;
-  /* Standard switch height */
   cursor: pointer;
   margin-left: -3em;
-  /* Position switch correctly */
   margin-top: 0;
-  /* Reset margin */
 }
 
 .form-check-input:disabled {
@@ -267,19 +232,15 @@ onMounted(() => {
 
 .form-check-label {
   padding-left: 0.5em;
-  /* Space between switch and label */
   cursor: pointer;
   margin-bottom: 0;
-  /* Remove default margin */
 }
 
-/* Style label when switch is disabled */
 .form-check-label:has(+ .form-check-input:disabled) {
   cursor: not-allowed;
   opacity: 0.7;
 }
 
-/* Helper text styling */
 .text-muted {
   font-size: 0.8rem;
   color: var(--secondary);
@@ -300,17 +261,5 @@ onMounted(() => {
 
 .pb-2 {
   padding-bottom: 0.5rem !important;
-}
-
-/* Basic outline button style */
-.btn-outline-secondary {
-  color: var(--secondary);
-  border-color: var(--secondary);
-}
-
-.btn-outline-secondary:hover {
-  color: #fff;
-  background-color: var(--secondary);
-  border-color: var(--secondary);
 }
 </style>
