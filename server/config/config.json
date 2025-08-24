@@ -1,22 +1,27 @@
 {
   "development": {
-    "username": "postgres",
-    "password": "cherry20254PG",
-    "database": "teacher_scheduler",
-    "host": "localhost",
+    "username": "devuser",
+    "password": "devpassword",
+    "database": "scheduler_dev",
+    "host": "db",
     "dialect": "postgres",
-    "port": 5433
+    "port": 5432
   },
   "test": {
-    "username": "postgres",
-    "password": "cherry20254PG",
-    "database": "teacher_scheduler_test",
-    "host": "localhost",
-    "dialect": "postgres",
-    "port": 5433
+    "username": "devuser",
+    "password": "devpassword",
+    "database": "scheduler_test",
+    "host": "127.0.0.1",
+    "dialect": "postgres"
   },
   "production": {
     "use_env_variable": "DATABASE_URL",
-    "dialect": "postgres"
+    "dialect": "postgres",
+    "dialectOptions": {
+      "ssl": {
+        "require": true,
+        "rejectUnauthorized": false
+      }
+    }
   }
 }

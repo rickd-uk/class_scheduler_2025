@@ -9,7 +9,7 @@ export default defineConfig({
     proxy: {
       // Requests to /api/... will be forwarded to http://localhost:3000/api/...
       "/api": {
-        target: "http://localhost:3000", // Your backend server address
+        target: "http://localhost:3001", // Your backend server address
         changeOrigin: true, // Important for proper proxying
         secure: false, // Set to false if your backend is HTTP (not HTTPS)
         // ws: true,        // If you use WebSockets
