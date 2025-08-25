@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # Script to start the backend services (database and server) for the Class Scheduler.
+# This version is NON-DESTRUCTIVE and will preserve your database data.
 
 echo "--- 🚀 Starting Scheduler Backend Environment ---"
 echo ""
@@ -13,16 +14,18 @@ if ! timeout 10s podman ps > /dev/null; then
     echo "Please try restarting it. On Linux, this is often 'systemctl --user restart podman.socket'."
     exit 1
   else
-    echo "Podman service seems responsive."
+    # This case is unlikely but handled for robustness.
+    echo "Podman service seems responsive but 'podman ps' failed."
   fi
 else
   echo "✅ Podman service is responsive."
 fi
 echo ""
 
-# --- Step 2: Stop any previous instances ---
+# --- Step 2: Stop any previous instances (SAFE VERSION) ---
 echo "--- Stopping any old containers to ensure a clean start... ---"
-podman-compose down --volumes > /dev/null 2>&1
+# This command stops and removes the containers but LEAVES THE VOLUMES INTACT.
+podman-compose down > /dev/null 2>&1
 echo "--- Old containers stopped. ---"
 echo ""
 
