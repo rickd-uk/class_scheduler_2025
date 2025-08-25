@@ -1,49 +1,11 @@
 #!/bin/bash
 
-# A unified script to manage the Class Scheduler development environment.
+# A unified script to manage the Class Scheduler development and production environments.
 
 # --- Helper function to navigate to project root ---
 cd_to_project_root() {
   # This finds the directory where the script is located and goes up one level.
   cd "$(dirname "$0")/.." || exit
-}
-
-# --- Function to start the backend services ---
-start_backend() {
-  echo "--- 🚀 Starting Backend Environment (Database & Server)... ---"
-  podman-compose up --build -d
-  if [ $? -ne 0 ]; then
-    echo "❌ ERROR: 'podman-compose up' failed. Please check the output for errors."
-    exit 1
-  fi
-  echo "✅ Backend containers are starting in the background."
-  echo "Use './scripts/dev.sh logs' to see their status."
-}
-
-# --- Function to start the frontend client ---
-start_frontend() {
-  echo "--- 🚀 Starting Frontend Client... ---"
-  cd client || exit
-  if [ ! -d "node_modules" ]; then
-    echo "--- 'node_modules' not found. Running 'yarn install'... ---"
-    yarn install
-  fi
-  echo "--- Starting Vite dev server at http://localhost:5173 ---"
-  yarn dev
-}
-
-# --- Function to stop all services ---
-stop_all() {
-  echo "--- 🛑 Stopping all containers... ---"
-  podman-compose down
-  echo "--- ✅ All containers stopped. ---"
-}
-
-# --- Function to view server logs ---
-view_logs() {
-  echo "--- 🪵 Viewing real-time logs for the server... ---"
-  echo "--- Press Ctrl+C to stop viewing ---"
-  podman-compose logs -f server
 }
 
 # --- Main script logic ---
@@ -52,26 +14,51 @@ cd_to_project_root
 COMMAND="$1"
 
 case $COMMAND in
-  start-backend)
-    start_backend
+  start:dev)
+    echo "--- 🚀 Starting DEVELOPMENT environment (Client + Server + DB)... ---"
+    podman-compose -f podman-compose.dev.yml up --build -d
+    echo "✅ Development containers are starting. Use './scripts/manage.sh logs:dev' to see their status."
     ;;
-  start-frontend)
-    start_frontend
+
+  start:prod)
+    echo "--- 🚀 Starting PRODUCTION environment (Client + Server + DB)... ---"
+    podman-compose -f podman-compose.yml up --build -d
+    echo "✅ Production containers are starting. Use './scripts/manage.sh logs:prod' to see their status."
     ;;
-  stop)
-    stop_all
+
+  stop:dev)
+    echo "--- 🛑 Stopping DEVELOPMENT environment... ---"
+    podman-compose -f podman-compose.dev.yml down
+    echo "--- ✅ Development containers stopped. ---"
     ;;
-  logs)
-    view_logs
+
+  stop:prod)
+    echo "--- 🛑 Stopping PRODUCTION environment... ---"
+    podman-compose -f podman-compose.yml down
+    echo "--- ✅ Production containers stopped. ---"
     ;;
+
+  logs:dev)
+    echo "--- 🪵 Viewing real-time logs for the DEVELOPMENT server... (Press Ctrl+C to stop) ---"
+    podman-compose -f podman-compose.dev.yml logs -f server
+    ;;
+
+  logs:prod)
+    echo "--- 🪵 Viewing real-time logs for the PRODUCTION server... (Press Ctrl+C to stop) ---"
+    podman-compose -f podman-compose.yml logs -f server
+    ;;
+
   *)
-    echo "Usage: ./scripts/dev.sh [command]"
+    echo "Usage: ./scripts/manage.sh [command]"
     echo ""
-    echo "Commands:"
-    echo "  start-backend    - Builds and starts the backend containers (server & db) in the background."
-    echo "  start-frontend   - Starts the frontend Vite development server."
-    echo "  stop             - Stops and removes all running containers."
-    echo "  logs             - Shows the real-time logs for the backend server."
+    echo "Development Commands (For your local machine):"
+    echo "  start:dev        - Builds and starts all services for local development with live-reloading."
+    echo "  stop:dev         - Stops and removes all development containers."
+    echo "  logs:dev         - Shows the real-time logs for the development backend server."
+    echo ""
+    echo "Production Commands (For your VPS):"
+    echo "  start:prod       - Builds and starts all services for production."
+    echo "  stop:prod        - Stops and removes all production containers."
+    echo "  logs:prod        - Shows the real-time logs for the production backend server."
     ;;
 esac
-
