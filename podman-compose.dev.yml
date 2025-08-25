@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  # Backend Service (Express + Node.js)
+  server:
+    build: ./server
+    container_name: scheduler-server-dev
+    command: ["sh", "-c", "yarn install && yarn dev"]
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    volumes:
+      - ./server:/usr/src/app
+      - /usr/app/node_modules
+    environment:
+      - NODE_ENV=development
+      - PORT=${PORT}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=${POSTGRES_PORT}
+      - DATABASE_URL=${DATABASE_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      - CLIENT_URL=${CLIENT_URL}
+    depends_on:
+      - db
+    networks:
+      - scheduler-network
+
+  # Client Service (Vue + Vite Dev Server)
+  client:
+    build:
+      context: ./client
+      target: development # This is the key part for development
+    container_name: scheduler-client-dev
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./client:/usr/src/app # This enables live-reloading
+      - /usr/src/app/node_modules
+    depends_on:
+      - server
+    networks:
+      - scheduler-network
+
+  # Database Service (PostgreSQL)
+  db:
+    image: postgres:15
+    container_name: scheduler-db-dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    networks:
+      - scheduler-network
+
+networks:
+  scheduler-network:
+    driver: bridge
+
+volumes:
+  postgres_data_dev:
