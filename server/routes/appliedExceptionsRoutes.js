@@ -75,10 +75,10 @@ router.post("/", authenticateToken, async (req, res) => {
       .status(400)
       .json({ message: "Valid date (YYYY-MM-DD) is required." });
   }
-  if (!isDayOff && !exceptionPatternId) {
+  if (!isDayOff && !exceptionPatternId && !reason) {
     return res.status(400).json({
       message:
-        "Either exceptionPatternId must be provided or isDayOff must be true.",
+        "Either exceptionPatternId must be provided or isDayOff must be true, or reason must be provided.",
     });
   }
   if (isDayOff && exceptionPatternId) {
