@@ -100,7 +100,7 @@
                 <input
                   type="checkbox"
                   :checked="!item.isDisabled"
-                  @change="toggleClass(idx, item)"
+                  @change="toggleClass(item.periodIndex, item)"
                   :disabled="togglingPeriod === idx"
                 />
                 <span class="toggle-slider"></span>
