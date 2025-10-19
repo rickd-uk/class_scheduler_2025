@@ -211,9 +211,14 @@ const relativeDateString = computed(() => {
 
 const selectedDate = computed({
   get() {
-    return store.getters["ui/lastDailySelectedDate"] || getTodayDateString();
+    return (
+      store.getters["ui/lastDailySelectedDate"] ||
+      localStorage.getItem("lastDailyDate") ||
+      getTodayDateString()
+    );
   },
   set(newDate) {
+    localStorage.setItem("lastDailyDate", newDate);
     store.dispatch("ui/setLastDailyDate", newDate);
   },
 });

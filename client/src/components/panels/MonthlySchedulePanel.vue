@@ -147,6 +147,17 @@ const getScheduleForDate = (dateString) => {
 
   // Apply exception for this date
   const exc = getAppliedExceptionForDate(dateString);
+
+  const disabledPeriods = new Set();
+  if (exc && !exc.isDayOff && !exc.exceptionPatternId && exc.reason) {
+    try {
+      const data = JSON.parse(exc.reason);
+      if (data.disabled && Array.isArray(data.disabled)) {
+        data.disabled.forEach((idx) => disabledPeriods.add(idx));
+      }
+    } catch (e) {}
+  }
+
   if (exc) {
     if (exc.isDayOff) {
       slots = Array(6).fill(null);
@@ -167,8 +178,11 @@ const getScheduleForDate = (dateString) => {
   const classDetails = [];
   const seen = new Set();
 
-  slots.forEach((slot) => {
+  slots.forEach((slot, idx) => {
     if (!slot || !slot.classId) return;
+
+    // Skip disabled periods
+    if (disabledPeriods.has(idx)) return;
 
     // Avoid duplicates in the same day
     if (seen.has(slot.classId)) return;
