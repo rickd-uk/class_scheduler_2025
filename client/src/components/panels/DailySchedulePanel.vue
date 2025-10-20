@@ -101,7 +101,7 @@
                   type="checkbox"
                   :checked="!item.isDisabled"
                   @change="toggleClass(item.periodIndex, item)"
-                  :disabled="togglingPeriod === idx"
+                  :disabled="togglingPeriod === item.periodIndex"
                 />
                 <span class="toggle-slider"></span>
               </label>
@@ -123,8 +123,18 @@
               >
               <!-- <span v-if="item.isDisabled" class="disabled-badge"
                 >Disabled</span
-              >  -->
+              > -->
             </span>
+
+            <!-- Note Icon -->
+            <button
+              @click.stop="openNoteModal(selectedDate, item.periodIndex)"
+              class="note-icon"
+              :class="{ 'has-note': hasNote(selectedDate, item.periodIndex) }"
+              title="Add note"
+            >
+              📝
+            </button>
           </li>
         </ul>
         <p v-else class="placeholder-content">
@@ -137,12 +147,21 @@
         </div>
       </template>
     </div>
+
+    <!-- Note Modal -->
+    <ClassNoteModal
+      :show="noteModal.show"
+      :note="noteModal.currentNote"
+      @close="closeNoteModal"
+      @save="saveClassNote"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, watch, nextTick } from "vue";
 import { useStore } from "vuex";
+import ClassNoteModal from "./ClassNoteModal.vue";
 
 const store = useStore();
 
@@ -179,6 +198,12 @@ const error = ref(null);
 const showDatePicker = ref(false);
 const datePickerInput = ref(null);
 const togglingPeriod = ref(null);
+const noteModal = ref({
+  show: false,
+  date: null,
+  periodIndex: null,
+  currentNote: "",
+});
 
 // Vuex getters
 const getScheduleForDay = (day) =>
@@ -211,14 +236,9 @@ const relativeDateString = computed(() => {
 
 const selectedDate = computed({
   get() {
-    return (
-      store.getters["ui/lastDailySelectedDate"] ||
-      localStorage.getItem("lastDailyDate") ||
-      getTodayDateString()
-    );
+    return store.getters["ui/lastDailySelectedDate"] || getTodayDateString();
   },
   set(newDate) {
-    localStorage.setItem("lastDailyDate", newDate);
     store.dispatch("ui/setLastDailyDate", newDate);
   },
 });
@@ -346,13 +366,17 @@ const toggleClass = async (periodIndex, item) => {
 const disablePeriod = async (periodIndex) => {
   const exc = getAppliedExceptionForDate(selectedDate.value);
   let disabledList = [];
+  let notes = {};
 
-  // Get existing disabled list if any
+  // Get existing disabled list and notes if any
   if (exc && exc.reason) {
     try {
       const data = JSON.parse(exc.reason);
       if (data.disabled && Array.isArray(data.disabled)) {
         disabledList = [...data.disabled];
+      }
+      if (data.notes) {
+        notes = { ...data.notes };
       }
     } catch (e) {
       // Ignore parse errors
@@ -364,12 +388,12 @@ const disablePeriod = async (periodIndex) => {
     disabledList.push(periodIndex);
   }
 
-  // Save exception with updated disabled list
+  // Save exception with updated disabled list and preserve notes
   const payload = {
     date: selectedDate.value,
     isDayOff: false,
     exceptionPatternId: null,
-    reason: JSON.stringify({ disabled: disabledList }),
+    reason: JSON.stringify({ disabled: disabledList, notes }),
     color: null,
   };
 
@@ -382,29 +406,33 @@ const enablePeriod = async (periodIndex) => {
   if (!exc) return;
 
   let disabledList = [];
+  let notes = {};
 
-  // Get existing disabled list
+  // Get existing disabled list and notes
   if (exc.reason) {
     try {
       const data = JSON.parse(exc.reason);
       if (data.disabled && Array.isArray(data.disabled)) {
         disabledList = data.disabled.filter((idx) => idx !== periodIndex);
       }
+      if (data.notes) {
+        notes = { ...data.notes };
+      }
     } catch (e) {
       // Ignore parse errors
     }
   }
 
-  // If no periods are disabled anymore, clear the exception
-  if (disabledList.length === 0) {
+  // If no periods are disabled anymore and no notes, clear the exception
+  if (disabledList.length === 0 && Object.keys(notes).length === 0) {
     await store.dispatch("schedule/clearAppliedException", selectedDate.value);
   } else {
-    // Otherwise update with new list
+    // Otherwise update with new list and preserve notes
     const payload = {
       date: selectedDate.value,
       isDayOff: false,
       exceptionPatternId: null,
-      reason: JSON.stringify({ disabled: disabledList }),
+      reason: JSON.stringify({ disabled: disabledList, notes }),
       color: null,
     };
 
@@ -412,16 +440,109 @@ const enablePeriod = async (periodIndex) => {
   }
 };
 
+// Note modal functions
+const openNoteModal = (date, periodIndex) => {
+  noteModal.value.date = date;
+  noteModal.value.periodIndex = periodIndex;
+  noteModal.value.currentNote = getNote(date, periodIndex);
+  noteModal.value.show = true;
+};
+
+const closeNoteModal = () => {
+  noteModal.value.show = false;
+  noteModal.value.date = null;
+  noteModal.value.periodIndex = null;
+  noteModal.value.currentNote = "";
+};
+
+const saveClassNote = async (note) => {
+  const { date, periodIndex } = noteModal.value;
+
+  try {
+    const exc = getAppliedExceptionForDate(date);
+    let disabledList = [];
+    let notes = {};
+
+    // Get existing data
+    if (exc && exc.reason) {
+      try {
+        const data = JSON.parse(exc.reason);
+        if (data.disabled && Array.isArray(data.disabled)) {
+          disabledList = [...data.disabled];
+        }
+        if (data.notes) {
+          notes = { ...data.notes };
+        }
+      } catch (e) {
+        // Ignore parse errors
+      }
+    }
+
+    // Update notes
+    if (note.trim()) {
+      notes[periodIndex] = note;
+    } else {
+      delete notes[periodIndex];
+    }
+
+    // If no disabled periods and no notes, clear the exception
+    if (disabledList.length === 0 && Object.keys(notes).length === 0) {
+      if (exc) {
+        await store.dispatch("schedule/clearAppliedException", date);
+      }
+    } else {
+      // Save exception with updated notes
+      const payload = {
+        date,
+        isDayOff: false,
+        exceptionPatternId: null,
+        reason: JSON.stringify({ disabled: disabledList, notes }),
+        color: null,
+      };
+
+      await store.dispatch("schedule/applyException", payload);
+    }
+
+    closeNoteModal();
+  } catch (error) {
+    console.error("Error saving note:", error);
+    store.dispatch(
+      "ui/showNotification",
+      {
+        type: "error",
+        message: "Failed to save note",
+      },
+      { root: true },
+    );
+  }
+};
+
+const getNote = (date, periodIndex) => {
+  const exc = getAppliedExceptionForDate(date);
+
+  if (!exc || !exc.reason) return "";
+
+  try {
+    const data = JSON.parse(exc.reason);
+    return data.notes?.[periodIndex] || "";
+  } catch {
+    return "";
+  }
+};
+
+const hasNote = (date, periodIndex) => {
+  return getNote(date, periodIndex).trim() !== "";
+};
+
 // Navigation
-const changeDay = (n) => {
-  const d = new Date(selectedDate.value);
-  d.setDate(d.getDate() + n);
+const changeDay = (days) => {
+  const d = new Date(selectedDate.value + "T12:00:00");
+  d.setDate(d.getDate() + days);
   selectedDate.value = toYYYYMMDD(d);
 };
-const changeMonth = (n) => {
-  const d = new Date(selectedDate.value);
-  d.setDate(1);
-  d.setMonth(d.getMonth() + n);
+const changeMonth = (months) => {
+  const d = new Date(selectedDate.value + "T12:00:00");
+  d.setMonth(d.getMonth() + months);
   selectedDate.value = toYYYYMMDD(d);
 };
 const goToPreviousDay = () => changeDay(-1);
@@ -576,6 +697,27 @@ watch(showDatePicker, async (val) => {
 .toggle-switch input:disabled + .toggle-slider {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* Note Icon Styles */
+.note-icon {
+  padding: 2px 6px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  opacity: 0.4;
+  transition: opacity 0.2s;
+  flex-shrink: 0;
+}
+
+.note-icon:hover {
+  opacity: 1;
+}
+
+.note-icon.has-note {
+  opacity: 1;
+  color: #3b82f6;
 }
 
 /* Styles for the Day Off notice */
