@@ -11,24 +11,16 @@
         <div v-if="isLoading" class="loading">Loading days off…</div>
         <div v-else-if="fetchError" class="error-message">{{ fetchError }}</div>
         <ul v-else-if="daysOff.length" class="item-list">
-          <li v-for="day in sortedDaysOff" :key="day.id" class="item">
+          <li v-for="day in daysOff" :key="day.id || day.date" class="item">
             <span class="color-square" :style="{ backgroundColor: day.color || '#F0F0F0' }"></span>
             <div class="item-details">
-              <span class="item-name">
-                {{ formatDisplayDate(day) }}
-                <span v-if="isRange(day)" class="day-count-badge">{{ getDayCount(day) }} days</span>
-              </span>
+              <span class="item-name">{{ formatDate(day.date) }}</span>
               <span v-if="day.reason" class="item-meta">{{ day.reason }}</span>
             </div>
             <div class="item-actions">
               <button class="btn btn-sm btn-secondary" @click="openEditModal(day)">Edit</button>
-              <button 
-                class="btn btn-sm btn-danger" 
-                @click="handleDeleteDayOff(day.id)"
-                :disabled="deletingId === day.id"
-              >
-                {{ deletingId === day.id ? '...' : 'Del' }}
-              </button>
+              <button class="btn btn-sm btn-danger" @click="handleDeleteDayOff(day.date)"
+                :disabled="deletingDate === day.date">Del</button>
             </div>
           </li>
         </ul>
@@ -39,14 +31,15 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue'; // Removed reactive
 import { useStore } from 'vuex';
 import CollapsiblePanel from './CollapsiblePanel.vue';
 
 const store = useStore();
 
 // --- Component State ---
-const deletingId = ref(null);
+// Removed state related to inline add form: showAddForm, isAdding, addError, newDayOff
+const deletingDate = ref(null);
 const deleteError = ref(null);
 
 // --- Store State ---
@@ -54,107 +47,53 @@ const daysOff = computed(() => store.getters['daysOff/allDaysOff']);
 const isLoading = computed(() => store.getters['daysOff/isLoading']);
 const fetchError = computed(() => store.getters['daysOff/error']);
 
-// --- Computed ---
-const sortedDaysOff = computed(() => {
-  return [...daysOff.value].sort((a, b) => {
-    const dateA = a.startDate || a.date;
-    const dateB = b.startDate || b.date;
-    return dateA.localeCompare(dateB);
-  });
-});
-
 // --- Methods ---
-const isRange = (dayOff) => {
-  return !!(dayOff.startDate && dayOff.endDate);
-};
-
-const getDayCount = (dayOff) => {
-  if (!isRange(dayOff)) return 1;
-  
-  const start = new Date(dayOff.startDate + 'T00:00:00');
-  const end = new Date(dayOff.endDate + 'T00:00:00');
-  const diffTime = Math.abs(end - start);
-  return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-};
-
-const formatDisplayDate = (dayOff) => {
-  if (isRange(dayOff)) {
-    const start = formatDate(dayOff.startDate);
-    const end = formatDate(dayOff.endDate);
-    
-    // Smart formatting: if same year, only show year once
-    const startDate = new Date(dayOff.startDate + 'T00:00:00');
-    const endDate = new Date(dayOff.endDate + 'T00:00:00');
-    
-    if (startDate.getFullYear() === endDate.getFullYear()) {
-      // Same year - show "Dec 20 - Jan 3, 2024"
-      const startFormatted = startDate.toLocaleDateString(undefined, {
-        month: 'short',
-        day: 'numeric'
-      });
-      const endFormatted = endDate.toLocaleDateString(undefined, {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric'
-      });
-      return `${startFormatted} - ${endFormatted}`;
-    } else {
-      // Different years - show both years
-      return `${start} - ${end}`;
-    }
-  } else {
-    return formatDate(dayOff.date);
-  }
-};
-
-const formatDate = (dateString) => {
-  if (!dateString) return '';
-  const date = new Date(dateString + 'T00:00:00');
-  if (isNaN(date.getTime())) return 'Invalid Date';
-  return date.toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    weekday: 'short'
-  });
-};
 
 // Method to open the modal for adding a new day off
 const openAddModal = () => {
   console.log("Opening day off editor modal in ADD mode");
   store.dispatch('ui/openModal', {
-    modalName: 'dayOffEditor',
+    modalName: 'dayOffEditor', // Use the existing editor modal name
     data: null // Pass null to indicate 'Add' mode
   });
 };
 
-// Method to open the modal for editing an existing day off
+// Method to open the modal for editing an existing day off (renamed from handleEditClick)
 const openEditModal = (dayOff) => {
   console.log("Opening day off editor modal in EDIT mode for:", dayOff);
   store.dispatch('ui/openModal', {
-    modalName: 'dayOffEditor',
+    modalName: 'dayOffEditor', // Use the existing editor modal name
     data: dayOff // Pass the full day off object
   });
 };
 
-// Delete handler
-const handleDeleteDayOff = async (id) => {
-  console.log(`[DaysOffPanel] handleDeleteDayOff called for ID: ${id}`);
-  deletingId.value = id;
-  deleteError.value = null;
+// Delete handler remains the same (no confirmation)
+const handleDeleteDayOff = async (date) => {
+  console.log(`[DaysOffPanel] handleDeleteDayOff called for date: ${date}`);
+  deletingDate.value = date; deleteError.value = null;
   try {
-    console.log(`[DaysOffPanel] Dispatching daysOff/deleteDayOff for ID: ${id}`);
-    await store.dispatch('daysOff/deleteDayOff', id);
-    console.log(`[DaysOffPanel] Dispatch successful for ID: ${id}`);
+    console.log(`[DaysOffPanel] Dispatching daysOff/deleteDayOff for date: ${date}`);
+    await store.dispatch('daysOff/deleteDayOff', date);
+    console.log(`[DaysOffPanel] Dispatch successful for date: ${date}`);
   } catch (error) {
-    console.error(`[DaysOffPanel] Error during delete dispatch for ID: ${id}`, error);
+    console.error(`[DaysOffPanel] Error during delete dispatch for date: ${date}`, error);
     deleteError.value = error.message || "Failed to delete day off.";
     alert(`Error: ${deleteError.value}`);
   } finally {
-    console.log(`[DaysOffPanel] Resetting delete state for ID: ${id}`);
-    deletingId.value = null;
+    console.log(`[DaysOffPanel] Resetting delete state for date: ${date}`);
+    deletingDate.value = null;
   }
 };
+
+// Helper to format date for display
+const formatDate = (dateString) => {
+  if (!dateString) return '';
+  const date = new Date(dateString + 'T00:00:00');
+  if (isNaN(date.getTime())) return 'Invalid Date';
+  return date.toLocaleDateString(undefined, {
+    year: 'numeric', month: 'short', day: 'numeric', weekday: 'short'
+  });
+}
 
 // --- Lifecycle Hook ---
 onMounted(() => {
@@ -172,6 +111,7 @@ onMounted(() => {
   padding-top: 0;
 }
 
+/* Removed .add-form styles */
 .item-list {
   list-style: none;
   padding: 0;
@@ -212,20 +152,6 @@ onMounted(() => {
 .item-name {
   font-weight: 500;
   font-size: 0.9rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.day-count-badge {
-  display: inline-block;
-  background-color: var(--primary, #007bff);
-  color: white;
-  font-size: 0.7rem;
-  font-weight: 600;
-  padding: 0.15rem 0.4rem;
-  border-radius: 10px;
-  white-space: nowrap;
 }
 
 .item-meta {

@@ -2,35 +2,113 @@
   <div class="modal-overlay" @click.self="closeModal">
     <div class="modal-content">
       <button @click="closeModal" class="modal-close-btn">&times;</button>
-      <h3>{{ isEditing ? 'Edit Day Off' : 'Add New Day Off' }}</h3>
-      <p v-if="isEditing && editableData.date">Editing for: <strong>{{ formatDateForTitle(editableData.date) }}</strong>
+      
+      <h3>{{ isEditing ? 'Edit Day Off' : 'Add Day Off' }}</h3>
+      <p v-if="isEditing && currentDayOff">
+        <strong>{{ isRange ? 'Date Range' : 'Date' }}:</strong> {{ formattedDateDisplay }}
       </p>
+      <hr>
+
+      <div v-if="saveError" class="error-message">{{ saveError }}</div>
 
       <form @submit.prevent="handleSubmit" class="modal-form">
-        <p v-if="formError" class="error-message">{{ formError }}</p>
-
+        <!-- Type Toggle (only shown when adding new) -->
         <div v-if="!isEditing" class="form-group">
-          <label for="edit-dayoff-date">Date</label>
-          <input type="date" id="edit-dayoff-date" v-model="editableData.date" required
-            class="form-control form-control-sm" :disabled="isLoading" />
+          <label class="toggle-label">Type:</label>
+          <div class="type-toggle">
+            <button 
+              type="button"
+              class="toggle-btn" 
+              :class="{ active: !isRangeMode }"
+              @click="isRangeMode = false"
+            >
+              Single Day
+            </button>
+            <button 
+              type="button"
+              class="toggle-btn" 
+              :class="{ active: isRangeMode }"
+              @click="isRangeMode = true"
+            >
+              Date Range
+            </button>
+          </div>
+        </div>
+
+        <!-- Single Day Input -->
+        <div v-if="!isRangeMode" class="form-group">
+          <label for="day-off-date">Date <span class="required">*</span></label>
+          <input
+            type="date"
+            id="day-off-date"
+            v-model="formData.date"
+            class="form-control form-control-sm"
+            required
+            :disabled="isLoading || isEditing"
+          />
+        </div>
+
+        <!-- Date Range Inputs -->
+        <div v-else>
+          <div class="form-group">
+            <label for="day-off-start-date">Start Date <span class="required">*</span></label>
+            <input
+              type="date"
+              id="day-off-start-date"
+              v-model="formData.startDate"
+              class="form-control form-control-sm"
+              required
+              :disabled="isLoading || isEditing"
+            />
+          </div>
+          <div class="form-group">
+            <label for="day-off-end-date">End Date <span class="required">*</span></label>
+            <input
+              type="date"
+              id="day-off-end-date"
+              v-model="formData.endDate"
+              class="form-control form-control-sm"
+              required
+              :disabled="isLoading || isEditing"
+              :min="formData.startDate"
+            />
+          </div>
+          <div v-if="formData.startDate && formData.endDate" class="day-count-hint">
+            {{ calculateDayCount() }} day{{ calculateDayCount() !== 1 ? 's' : '' }}
+          </div>
+        </div>
+
+        <!-- Common Fields -->
+        <div class="form-group">
+          <label for="day-off-reason">Reason (Optional)</label>
+          <input
+            type="text"
+            id="day-off-reason"
+            v-model="formData.reason"
+            class="form-control form-control-sm"
+            placeholder="e.g., Vacation, Holiday, Personal"
+            :disabled="isLoading"
+            maxlength="255"
+          />
         </div>
 
         <div class="form-group">
-          <label for="edit-dayoff-reason">Reason</label>
-          <input type="text" id="edit-dayoff-reason" v-model="editableData.reason" class="form-control form-control-sm"
-            placeholder="e.g., Holiday, Personal (Optional)" :disabled="isLoading" />
-        </div>
-        <div class="form-group">
-          <label for="edit-dayoff-color">Color</label>
-          <input type="color" id="edit-dayoff-color" v-model="editableData.color"
-            class="form-control form-control-sm form-control-color" :disabled="isLoading">
+          <label for="day-off-color">Color</label>
+          <input
+            type="color"
+            id="day-off-color"
+            v-model="formData.color"
+            class="form-control form-control-sm form-control-color"
+            :disabled="isLoading"
+          />
         </div>
 
         <div class="modal-footer">
-          <button @click="closeModal" type="button" class="btn btn-secondary btn-sm" :disabled="isLoading">
-            Close </button>
-          <button type="submit" class="btn btn-primary btn-sm" :disabled="isLoading">
-            {{ isLoading ? (isEditing ? 'Updating...' : 'Adding...') : (isEditing ? 'Save Changes' : 'Add') }}
+          <button type="button" class="btn btn-sm btn-secondary" @click="closeModal" :disabled="isLoading">
+            Cancel
+          </button>
+          <button type="submit" class="btn btn-sm btn-primary" :disabled="isLoading">
+            {{ isLoading ? 'Saving...' : (isEditing ? 'Update' : 'Add') }}
           </button>
         </div>
       </form>
@@ -39,138 +117,179 @@
 </template>
 
 <script setup>
-// Import nextTick
-import { ref, reactive, computed, watch, onMounted, onUnmounted, nextTick } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useStore } from 'vuex';
 
 const store = useStore();
-const modalName = 'dayOffEditor'; // Unique name for this modal
 
-// --- State ---
-const isLoading = ref(false); // Combined loading state for add/update
-const formError = ref(null); // Error specific to this form
-
-const getTodayDateString = () => {
-  const today = new Date();
-  const offset = today.getTimezoneOffset() * 60000;
-  const localDate = new Date(today.getTime() - offset);
-  return localDate.toISOString().split('T')[0];
-}
-
-// Reactive object for editable fields
-// Add 'date' field for Add mode
-const editableData = reactive({
-  id: null, // Store ID when editing
-  date: '',
-  reason: '',
-  color: '#F0F0F0' // Default color
+// --- Props from modal data ---
+const modalData = computed(() => store.state.ui.modals.dayOffEditor);
+const currentDayOff = computed(() => modalData.value?.data || null);
+const isEditing = computed(() => !!currentDayOff.value);
+const isRange = computed(() => {
+  return currentDayOff.value && currentDayOff.value.startDate && currentDayOff.value.endDate;
 });
 
-// Reset form fields (used for Add mode)
-const resetForm = () => {
-  editableData.id = null;
-  editableData.date = getTodayDateString();
-  editableData.reason = '';
-  editableData.color = '#F0F0F0'; // Reset color
-  formError.value = null;
-  console.log("Day Off Editor form reset.");
+// --- Component State ---
+const isLoading = ref(false);
+const saveError = ref(null);
+const isRangeMode = ref(false); // Toggle between single day and range (for new entries)
+
+// --- Form Data ---
+const formData = ref({
+  date: '',
+  startDate: '',
+  endDate: '',
+  reason: '',
+  color: '#F0F0F0',
+});
+
+// --- Initialize Form ---
+const initializeForm = () => {
+  if (isEditing.value) {
+    const dayOff = currentDayOff.value;
+    formData.value = {
+      date: dayOff.date || '',
+      startDate: dayOff.startDate || '',
+      endDate: dayOff.endDate || '',
+      reason: dayOff.reason || '',
+      color: dayOff.color || '#F0F0F0',
+    };
+    isRangeMode.value = isRange.value;
+  } else {
+    // Reset form for adding new
+    formData.value = {
+      date: '',
+      startDate: '',
+      endDate: '',
+      reason: '',
+      color: '#F0F0F0',
+    };
+    isRangeMode.value = false;
+  }
+  saveError.value = null;
 };
 
-// --- Computed Properties ---
-const modalData = computed(() => store.getters['ui/getModalData'](modalName));
-// Determine if editing based on presence of ID in modalData
-const isEditing = computed(() => !!modalData.value?.id);
-
-// --- Watchers ---
-// Populate the form when the modal data changes
-watch(modalData, (newData) => {
-  formError.value = null; // Clear previous errors
-  if (newData && typeof newData === 'object' && newData.id) {
-    // Edit Mode: Populate from existing data
-    editableData.id = newData.id; // Store ID for update action
-    editableData.date = newData.date || ''; // Date is fixed when editing
-    editableData.reason = newData.reason || '';
-    editableData.color = newData.color || '#F0F0F0';
-    console.log("DayOffEditorModal received EDIT data:", newData);
-  } else {
-    // Add Mode: Reset form
-    resetForm();
-    console.log("DayOffEditorModal opened in ADD mode.");
+// --- Computed Display Values ---
+const formattedDateDisplay = computed(() => {
+  if (isRange.value && currentDayOff.value) {
+    return `${formatDate(currentDayOff.value.startDate)} - ${formatDate(currentDayOff.value.endDate)}`;
+  } else if (currentDayOff.value) {
+    return formatDate(currentDayOff.value.date);
   }
-}, { immediate: true }); // Run immediately
+  return '';
+});
 
 // --- Methods ---
-
-
-// Close the modal
 const closeModal = () => {
-  if (isLoading.value) return;
-  store.dispatch('ui/closeModal', modalName);
+  console.log('Closing day off editor modal');
+  store.dispatch('ui/closeModal', 'dayOffEditor');
 };
 
-// Handle form submission (Add or Update)
 const handleSubmit = async () => {
-  // Validate date for Add mode
-  if (!isEditing.value && (!editableData.date || !/^\d{4}-\d{2}-\d{2}$/.test(editableData.date))) {
-    formError.value = "Please select a valid date.";
-    return;
-  }
-  // Validate color format
-  if (editableData.color && !/^#[0-9A-F]{6}$/i.test(editableData.color)) {
-    formError.value = 'Invalid color format. Use hex #RRGGBB.';
-    return;
-  }
-
+  saveError.value = null;
   isLoading.value = true;
-  formError.value = null;
 
   try {
     if (isEditing.value) {
-      // --- Update Existing Day Off ---
-      console.log(`Dispatching updateDayOff for date ${editableData.date}`);
+      // Update existing day off
+      const updateData = {
+        reason: formData.value.reason,
+        color: formData.value.color,
+      };
+      
+      // Note: We don't allow changing the date/range when editing
+      // If you want to allow that, add startDate/endDate to updateData
+      
       await store.dispatch('daysOff/updateDayOff', {
-        date: editableData.date, // Use the date from the form data (which was set from modalData)
-        data: { // Send only updatable fields
-          reason: editableData.reason,
-          color: editableData.color
-        }
+        id: currentDayOff.value.id,
+        data: updateData,
       });
-      console.log("▶️ Adding/Updating DayOff with date:", editableData.date);
-      nextTick(closeModal); // Close after successful update
+      console.log('Day off updated successfully');
     } else {
-      // --- Add New Day Off ---
-      console.log(`Dispatching addDayOff for date ${editableData.date}`);
-      await store.dispatch('daysOff/addDayOff', {
-        date: editableData.date,
-        reason: editableData.reason,
-        color: editableData.color
-      });
-      resetForm(); // Reset form to allow adding another
-      // Keep modal open after adding
+      // Add new day off
+      const newDayOffData = {
+        reason: formData.value.reason,
+        color: formData.value.color,
+      };
+
+      if (isRangeMode.value) {
+        // Validate range
+        if (!formData.value.startDate || !formData.value.endDate) {
+          saveError.value = 'Both start and end dates are required for a range';
+          isLoading.value = false;
+          return;
+        }
+        if (formData.value.startDate > formData.value.endDate) {
+          saveError.value = 'Start date must be on or before end date';
+          isLoading.value = false;
+          return;
+        }
+        newDayOffData.startDate = formData.value.startDate;
+        newDayOffData.endDate = formData.value.endDate;
+      } else {
+        // Single day
+        if (!formData.value.date) {
+          saveError.value = 'Date is required';
+          isLoading.value = false;
+          return;
+        }
+        newDayOffData.date = formData.value.date;
+      }
+
+      await store.dispatch('daysOff/addDayOff', newDayOffData);
+      console.log('Day off added successfully');
     }
+
+    closeModal();
   } catch (error) {
-    formError.value = error.message || `Failed to ${isEditing.value ? 'update' : 'add'} day off.`;
+    saveError.value = error.message || `Failed to ${isEditing.value ? 'update' : 'add'} day off.`;
     console.error(`Error ${isEditing.value ? 'updating' : 'adding'} day off:`, error);
   } finally {
-    isLoading.value = false; // Reset loading state
+    isLoading.value = false;
   }
 };
 
-// Helper function to format date for the title display
-const formatDateForTitle = (dateString) => {
-  if (!dateString) return 'Invalid Date';
+const formatDate = (dateString) => {
+  if (!dateString) return '';
   try {
     const date = new Date(dateString + 'T00:00:00');
     if (isNaN(date.getTime())) return 'Invalid Date';
-    return date.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-  } catch (e) { return 'Invalid Date'; }
-}
+    return date.toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      weekday: 'short'
+    });
+  } catch (e) {
+    return 'Invalid Date';
+  }
+};
 
-// --- Lifecycle Hooks (Optional: Esc key to close) ---
-const handleEscapeKey = (event) => { if (event.key === 'Escape') { closeModal(); } };
-onMounted(() => { document.addEventListener('keydown', handleEscapeKey); });
-onUnmounted(() => { document.removeEventListener('keydown', handleEscapeKey); });
+const calculateDayCount = () => {
+  if (!formData.value.startDate || !formData.value.endDate) return 0;
+  
+  const start = new Date(formData.value.startDate + 'T00:00:00');
+  const end = new Date(formData.value.endDate + 'T00:00:00');
+  const diffTime = Math.abs(end - start);
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+};
 
+// --- Lifecycle Hooks ---
+const handleEscapeKey = (event) => {
+  if (event.key === 'Escape') {
+    closeModal();
+  }
+};
+
+onMounted(() => {
+  initializeForm();
+  document.addEventListener('keydown', handleEscapeKey);
+});
+
+onUnmounted(() => {
+  document.removeEventListener('keydown', handleEscapeKey);
+});
 </script>
 
 <style scoped>
@@ -201,6 +320,59 @@ hr {
   border: none;
   border-top: 1px solid var(--border-color);
   margin: 1rem 0;
+}
+
+.required {
+  color: var(--danger);
+}
+
+/* Type Toggle Styles */
+.type-toggle {
+  display: flex;
+  gap: 0;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  overflow: hidden;
+}
+
+.toggle-btn {
+  flex: 1;
+  padding: 0.5rem 1rem;
+  border: none;
+  background-color: var(--background);
+  color: var(--text);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.toggle-btn:not(:last-child) {
+  border-right: 1px solid var(--border-color);
+}
+
+.toggle-btn:hover {
+  background-color: var(--hover-bg, #f0f0f0);
+}
+
+.toggle-btn.active {
+  background-color: var(--primary);
+  color: white;
+  font-weight: 600;
+}
+
+.toggle-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+/* Day Count Hint */
+.day-count-hint {
+  font-size: 0.85rem;
+  color: var(--secondary);
+  margin-top: -0.5rem;
+  margin-bottom: 1rem;
+  font-style: italic;
 }
 
 .modal-footer {
@@ -237,7 +409,8 @@ textarea.form-control-sm {
 }
 
 .btn-primary:disabled,
-.btn-secondary:disabled {
+.btn-secondary:disabled,
+.toggle-btn:disabled {
   cursor: not-allowed;
   opacity: 0.65;
 }

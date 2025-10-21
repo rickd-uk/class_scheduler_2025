@@ -19,55 +19,51 @@ const DaysOffService = {
   },
 
   /**
-   * Adds a new day off for the authenticated user (single day or range).
-   * @param {object} dayOffData - Object containing:
-   *   - For single day: { date: 'YYYY-MM-DD', reason?: string, color?: '#RRGGBB' }
-   *   - For range: { startDate: 'YYYY-MM-DD', endDate: 'YYYY-MM-DD', reason?: string, color?: '#RRGGBB' }
+   * Adds a new day off for the authenticated user.
+   * @param {object} dayOffData - Object containing { date: 'YYYY-MM-DD', reason?: string }.
    * @returns {Promise<AxiosResponse<any>>} Promise resolving with the API response containing the newly created day off object.
    */
   add(dayOffData) {
-     console.log(`DaysOffService: Adding day off via POST ${DAYS_OFF_ENDPOINT}`, dayOffData);
+     console.log(`DaysOffService: Adding day off via POST ${DAYS_OFF_ENDPOINT}`);
      // Uses the generic ApiService POST method
     return ApiService.post(DAYS_OFF_ENDPOINT, dayOffData);
   },
 
-  /**
-   * Updates an existing day off by ID.
-   * @param {number} id - The ID of the day off to update.
-   * @param {object} data - Object containing the updated fields (e.g., { reason: 'New Reason', color: '#FF0000', startDate, endDate }).
+/**
+   * Updates the reason for an existing day off.
+   * @param {string} date - The date of the day off to update ('YYYY-MM-DD').
+   * @param {object} data - Object containing the updated reason (e.g., { reason: 'New Reason' }).
    * @returns {Promise<AxiosResponse<any>>} Promise resolving with the API response containing the updated day off object.
    */
-  update(id, data) {
-     const url = `${DAYS_OFF_ENDPOINT}/${id}`;
-     console.log(`DaysOffService: Updating day off ID ${id} via PUT ${url}`, data);
+  update(date, data) {
+     const url = `${DAYS_OFF_ENDPOINT}/${date}`;
+     console.log(`DaysOffService: Updating day off for date ${date} via PUT ${url}`);
      // Uses the generic ApiService PUT method
      return ApiService.put(url, data); // Send PUT request with new data
   },
 
+
+
   /**
-   * Deletes a specific day off by ID for the authenticated user.
-   * @param {number} id - The ID of the day off to delete.
+   * Deletes a specific day off by date for the authenticated user.
+   * @param {string} date - The date to delete ('YYYY-MM-DD').
    * @returns {Promise<AxiosResponse<any>>} Promise resolving with the API response (usually empty with status 204 on success).
    */
-  delete(id) {
-     // Construct the URL for the specific ID to delete
-     const url = `${DAYS_OFF_ENDPOINT}/${id}`;
-     console.log(`DaysOffService: Deleting day off ID ${id} via DELETE ${url}`);
+  delete(date) {
+     // Construct the URL for the specific date to delete
+     const url = `${DAYS_OFF_ENDPOINT}/${date}`;
+     console.log(`DaysOffService: Deleting day off for date ${date} via DELETE ${url}`);
      // Uses the generic ApiService DELETE method
      return ApiService.delete(url);
   },
 
-  /**
-   * Checks if a specific date is marked as a day off.
-   * @param {string} date - The date to check ('YYYY-MM-DD').
-   * @returns {Promise<AxiosResponse<any>>} Promise resolving with { isDayOff: boolean, dayOff?: object }
-   */
-  checkDate(date) {
-    const url = `${DAYS_OFF_ENDPOINT}/check/${date}`;
-    console.log(`DaysOffService: Checking if ${date} is a day off via GET ${url}`);
-    return ApiService.get(url);
-  }
+  // --- Placeholder for future methods (e.g., update) ---
+  // update(date, dayOffData) {
+  //   const url = `${DAYS_OFF_ENDPOINT}/${date}`;
+  //   return ApiService.put(url, dayOffData);
+  // }
 };
 
 // Export the service object for use in the Vuex store
 export default DaysOffService;
+
