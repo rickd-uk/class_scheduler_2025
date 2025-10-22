@@ -11,7 +11,7 @@
           placeholder="Add a note for this class..."
           @keydown.esc="close"
           ref="textarea"
-          rows="6"
+          rows="10"
         ></textarea>
       </div>
       <div class="modal-footer">
@@ -46,6 +46,8 @@ export default {
     },
     show(newVal) {
       if (newVal) {
+        // Reset localNote to the current note prop value when modal opens
+        this.localNote = this.note;
         this.$nextTick(() => {
           this.$refs.textarea?.focus();
         });
@@ -81,7 +83,7 @@ export default {
   background: white;
   border-radius: 8px;
   width: 90%;
-  max-width: 500px;
+  max-width: 800px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
@@ -89,13 +91,13 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px;
+  padding: 20px;
   border-bottom: 1px solid #e5e7eb;
 }
 
 .modal-header h3 {
   margin: 0;
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 600;
 }
 
@@ -116,17 +118,19 @@ export default {
 }
 
 .modal-body {
-  padding: 16px;
+  padding: 20px;
 }
 
 .modal-body textarea {
   width: 100%;
-  padding: 8px;
+  min-height: 200px;
+  padding: 12px;
   border: 1px solid #d1d5db;
   border-radius: 4px;
   font-family: inherit;
-  font-size: 14px;
-  resize: vertical;
+  font-size: 15px;
+  resize: none;
+  line-height: 1.6;
 }
 
 .modal-body textarea:focus {
@@ -138,13 +142,13 @@ export default {
 .modal-footer {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
-  padding: 16px;
+  gap: 10px;
+  padding: 20px;
   border-top: 1px solid #e5e7eb;
 }
 
 .modal-footer button {
-  padding: 8px 16px;
+  padding: 10px 20px;
   border-radius: 4px;
   border: none;
   font-size: 14px;
