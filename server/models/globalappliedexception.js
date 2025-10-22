@@ -25,7 +25,7 @@ module.exports = (sequelize, DataTypes) => {
       },
       reason: {
         // Optional notes
-        type: DataTypes.STRING,
+        type: DataTypes.TEXT,
         allowNull: true,
       },
       // No isDayOff or color needed here, it's purely for applying patterns
