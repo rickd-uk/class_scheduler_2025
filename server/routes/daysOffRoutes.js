@@ -191,23 +191,20 @@ router.post("/", async (req, res) => {
       if (isRange) {
         // For ranges, add the range record to global
         await GlobalDayOff.create({
-          date: startDate,
           startDate,
           endDate,
-          isRange: true,
           reason: newDayOff.reason,
           color: newDayOff.color,
         });
       } else {
         await GlobalDayOff.create({
-          date: newDayOff.date,
-          isRange: false,
+          startDate: newDayOff.date,
+          endDate: null,
           reason: newDayOff.reason,
           color: newDayOff.color,
         });
       }
     }
-
     res.status(201).json(newDayOff);
   } catch (err) {
     console.error(`Error adding day off for user ${userId}:`, err);
@@ -295,7 +292,7 @@ router.put("/:id", async (req, res) => {
         `[PUT /api/days-off/${dayOffId}] (admin) also updating global day off`,
       );
       const globalDayOff = await GlobalDayOff.findOne({
-        where: { date: dayOff.date },
+        where: { startDate: dayOff.date },
       });
       if (globalDayOff) {
         if (reason !== undefined) globalDayOff.reason = reason;
@@ -303,7 +300,6 @@ router.put("/:id", async (req, res) => {
         if (isUpdatingRange) {
           globalDayOff.startDate = dayOff.startDate;
           globalDayOff.endDate = dayOff.endDate;
-          globalDayOff.isRange = dayOff.isRange;
         }
         await globalDayOff.save();
       }
@@ -349,7 +345,7 @@ router.delete("/:id", async (req, res) => {
       console.log(
         `[DELETE /api/days-off/${dayOffId}] (admin) also deleting global day off`,
       );
-      await GlobalDayOff.destroy({ where: { date: dateToDelete } });
+      await GlobalDayOff.destroy({ where: { startDate: dateToDelete } });
     }
 
     res.status(204).send();
