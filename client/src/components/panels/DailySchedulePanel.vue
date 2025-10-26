@@ -161,6 +161,7 @@
 <script setup>
 import { ref, computed, onMounted, watch, nextTick } from "vue";
 import { useStore } from "vuex";
+import { findDayOffForDate, getDayRangeInfo } from "../../utils/daysOffUtils";
 import ClassNoteModal from "./ClassNoteModal.vue";
 
 const store = useStore();
@@ -245,28 +246,41 @@ const selectedDate = computed({
 
 // Day off logic
 const isDayOff = computed(() => {
-  if (
-    applyGlobalDaysOff.value &&
-    globalDaysOff.value.some((d) => d.date === selectedDate.value)
-  )
-    return true;
-  return personalDaysOff.value.some((d) => d.date === selectedDate.value);
+  const allDaysOff = applyGlobalDaysOff.value
+    ? [...globalDaysOff.value, ...personalDaysOff.value]
+    : personalDaysOff.value;
+
+  return findDayOffForDate(selectedDate.value, allDaysOff) !== null;
 });
+
+// Replace dayOffColor
 const dayOffColor = computed(() => {
-  const g =
-    applyGlobalDaysOff.value &&
-    globalDaysOff.value.find((d) => d.date === selectedDate.value);
-  if (g) return g.color;
-  const p = personalDaysOff.value.find((d) => d.date === selectedDate.value);
-  return p?.color || "#F0F0F0";
+  const allDaysOff = applyGlobalDaysOff.value
+    ? [...globalDaysOff.value, ...personalDaysOff.value]
+    : personalDaysOff.value;
+
+  const dayOff = findDayOffForDate(selectedDate.value, allDaysOff);
+  return dayOff?.color || "#F0F0F0";
 });
+
+// Replace dayOffReason
 const dayOffReason = computed(() => {
-  const g =
-    applyGlobalDaysOff.value &&
-    globalDaysOff.value.find((d) => d.date === selectedDate.value);
-  if (g) return g.reason || "Day Off";
-  const p = personalDaysOff.value.find((d) => d.date === selectedDate.value);
-  return p?.reason || "Day Off";
+  const allDaysOff = applyGlobalDaysOff.value
+    ? [...globalDaysOff.value, ...personalDaysOff.value]
+    : personalDaysOff.value;
+
+  const dayOff = findDayOffForDate(selectedDate.value, allDaysOff);
+  if (!dayOff) return "Day Off";
+
+  const rangeInfo = getDayRangeInfo(selectedDate.value, dayOff);
+  const reason = dayOff.reason || "Day Off";
+
+  // Add day indicator for ranges
+  if (rangeInfo && rangeInfo.totalDays > 1) {
+    return `${reason} (Day ${rangeInfo.dayNumber}/${rangeInfo.totalDays})`;
+  }
+
+  return reason;
 });
 
 // Get all disabled periods for this date

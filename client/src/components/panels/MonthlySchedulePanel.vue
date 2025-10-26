@@ -74,6 +74,7 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { useStore } from "vuex";
+import { findDayOffForDate, getDayRangeInfo } from "../../utils/daysOffUtils";
 
 const store = useStore();
 
@@ -219,25 +220,35 @@ const getScheduleForDate = (dateString) => {
 
 // Check if a date is a day off
 const isDayOffDate = (dateString) => {
-  if (
-    applyGlobalDaysOff.value &&
-    globalDaysOff.value.some((d) => d.date === dateString)
-  ) {
-    return true;
-  }
-  return personalDaysOff.value.some((d) => d.date === dateString);
+  const allDaysOff = applyGlobalDaysOff.value
+    ? [...globalDaysOff.value, ...personalDaysOff.value]
+    : personalDaysOff.value;
+
+  return findDayOffForDate(dateString, allDaysOff) !== null;
 };
 
+// Replace getDayOffDetails
 const getDayOffDetails = (dateString) => {
-  const g =
-    applyGlobalDaysOff.value &&
-    globalDaysOff.value.find((d) => d.date === dateString);
-  if (g) return { color: g.color || "#F0F0F0", reason: g.reason || "Day Off" };
+  const allDaysOff = applyGlobalDaysOff.value
+    ? [...globalDaysOff.value, ...personalDaysOff.value]
+    : personalDaysOff.value;
 
-  const p = personalDaysOff.value.find((d) => d.date === dateString);
-  return p
-    ? { color: p.color || "#F0F0F0", reason: p.reason || "Day Off" }
-    : null;
+  const dayOff = findDayOffForDate(dateString, allDaysOff);
+  if (!dayOff) return null;
+
+  const rangeInfo = getDayRangeInfo(dateString, dayOff);
+  const reason = dayOff.reason || "Day Off";
+
+  // Add day indicator for ranges
+  let displayReason = reason;
+  if (rangeInfo && rangeInfo.totalDays > 1) {
+    displayReason = `${rangeInfo.dayNumber}/${rangeInfo.totalDays}`;
+  }
+
+  return {
+    color: dayOff.color || "#F0F0F0",
+    reason: displayReason,
+  };
 };
 
 // Generate calendar cells
