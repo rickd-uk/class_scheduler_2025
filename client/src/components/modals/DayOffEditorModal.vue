@@ -2,12 +2,13 @@
   <div class="modal-overlay" @click.self="closeModal">
     <div class="modal-content">
       <button @click="closeModal" class="modal-close-btn">&times;</button>
-      
-      <h3>{{ isEditing ? 'Edit Day Off' : 'Add Day Off' }}</h3>
+
+      <h3>{{ isEditing ? "Edit Day Off" : "Add Day Off" }}</h3>
       <p v-if="isEditing && currentDayOff">
-        <strong>{{ isRange ? 'Date Range' : 'Date' }}:</strong> {{ formattedDateDisplay }}
+        <strong>{{ isRange ? "Date Range" : "Date" }}:</strong>
+        {{ formattedDateDisplay }}
       </p>
-      <hr>
+      <hr />
 
       <div v-if="saveError" class="error-message">{{ saveError }}</div>
 
@@ -16,17 +17,17 @@
         <div v-if="!isEditing" class="form-group">
           <label class="toggle-label">Type:</label>
           <div class="type-toggle">
-            <button 
+            <button
               type="button"
-              class="toggle-btn" 
+              class="toggle-btn"
               :class="{ active: !isRangeMode }"
               @click="isRangeMode = false"
             >
               Single Day
             </button>
-            <button 
+            <button
               type="button"
-              class="toggle-btn" 
+              class="toggle-btn"
               :class="{ active: isRangeMode }"
               @click="isRangeMode = true"
             >
@@ -51,7 +52,9 @@
         <!-- Date Range Inputs -->
         <div v-else>
           <div class="form-group">
-            <label for="day-off-start-date">Start Date <span class="required">*</span></label>
+            <label for="day-off-start-date"
+              >Start Date <span class="required">*</span></label
+            >
             <input
               type="date"
               id="day-off-start-date"
@@ -62,7 +65,9 @@
             />
           </div>
           <div class="form-group">
-            <label for="day-off-end-date">End Date <span class="required">*</span></label>
+            <label for="day-off-end-date"
+              >End Date <span class="required">*</span></label
+            >
             <input
               type="date"
               id="day-off-end-date"
@@ -73,8 +78,13 @@
               :min="formData.startDate"
             />
           </div>
-          <div v-if="formData.startDate && formData.endDate" class="day-count-hint">
-            {{ calculateDayCount() }} day{{ calculateDayCount() !== 1 ? 's' : '' }}
+          <div
+            v-if="formData.startDate && formData.endDate"
+            class="day-count-hint"
+          >
+            {{ calculateDayCount() }} day{{
+              calculateDayCount() !== 1 ? "s" : ""
+            }}
           </div>
         </div>
 
@@ -104,11 +114,20 @@
         </div>
 
         <div class="modal-footer">
-          <button type="button" class="btn btn-sm btn-secondary" @click="closeModal" :disabled="isLoading">
+          <button
+            type="button"
+            class="btn btn-sm btn-secondary"
+            @click="closeModal"
+            :disabled="isLoading"
+          >
             Cancel
           </button>
-          <button type="submit" class="btn btn-sm btn-primary" :disabled="isLoading">
-            {{ isLoading ? 'Saving...' : (isEditing ? 'Update' : 'Add') }}
+          <button
+            type="submit"
+            class="btn btn-sm btn-primary"
+            :disabled="isLoading"
+          >
+            {{ isLoading ? "Saving..." : isEditing ? "Update" : "Add" }}
           </button>
         </div>
       </form>
@@ -117,8 +136,8 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue';
-import { useStore } from 'vuex';
+import { ref, computed, onMounted, onUnmounted } from "vue";
+import { useStore } from "vuex";
 
 const store = useStore();
 
@@ -127,7 +146,11 @@ const modalData = computed(() => store.state.ui.modals.dayOffEditor);
 const currentDayOff = computed(() => modalData.value?.data || null);
 const isEditing = computed(() => !!currentDayOff.value);
 const isRange = computed(() => {
-  return currentDayOff.value && currentDayOff.value.startDate && currentDayOff.value.endDate;
+  return (
+    currentDayOff.value &&
+    currentDayOff.value.startDate &&
+    currentDayOff.value.endDate
+  );
 });
 
 // --- Component State ---
@@ -137,33 +160,43 @@ const isRangeMode = ref(false); // Toggle between single day and range (for new 
 
 // --- Form Data ---
 const formData = ref({
-  date: '',
-  startDate: '',
-  endDate: '',
-  reason: '',
-  color: '#F0F0F0',
+  date: "",
+  startDate: "",
+  endDate: "",
+  reason: "",
+  color: "#F0F0F0",
 });
+
+// --- Helper function to get today's date in YYYY-MM-DD format ---
+const getTodayString = () => {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
 
 // --- Initialize Form ---
 const initializeForm = () => {
   if (isEditing.value) {
     const dayOff = currentDayOff.value;
     formData.value = {
-      date: dayOff.date || '',
-      startDate: dayOff.startDate || '',
-      endDate: dayOff.endDate || '',
-      reason: dayOff.reason || '',
-      color: dayOff.color || '#F0F0F0',
+      date: dayOff.date || "",
+      startDate: dayOff.startDate || "",
+      endDate: dayOff.endDate || "",
+      reason: dayOff.reason || "",
+      color: dayOff.color || "#F0F0F0",
     };
     isRangeMode.value = isRange.value;
   } else {
-    // Reset form for adding new
+    // Reset form for adding new - with today's date as default
+    const todayString = getTodayString();
     formData.value = {
-      date: '',
-      startDate: '',
-      endDate: '',
-      reason: '',
-      color: '#F0F0F0',
+      date: todayString, // Set today for single day
+      startDate: todayString, // Set today as start date for range
+      endDate: "", // End date remains empty for user to select
+      reason: "",
+      color: "#F0F0F0",
     };
     isRangeMode.value = false;
   }
@@ -177,13 +210,13 @@ const formattedDateDisplay = computed(() => {
   } else if (currentDayOff.value) {
     return formatDate(currentDayOff.value.date);
   }
-  return '';
+  return "";
 });
 
 // --- Methods ---
 const closeModal = () => {
-  console.log('Closing day off editor modal');
-  store.dispatch('ui/closeModal', 'dayOffEditor');
+  console.log("Closing day off editor modal");
+  store.dispatch("ui/closeModal", "dayOffEditor");
 };
 
 const handleSubmit = async () => {
@@ -197,15 +230,15 @@ const handleSubmit = async () => {
         reason: formData.value.reason,
         color: formData.value.color,
       };
-      
+
       // Note: We don't allow changing the date/range when editing
       // If you want to allow that, add startDate/endDate to updateData
-      
-      await store.dispatch('daysOff/updateDayOff', {
+
+      await store.dispatch("daysOff/updateDayOff", {
         id: currentDayOff.value.id,
         data: updateData,
       });
-      console.log('Day off updated successfully');
+      console.log("Day off updated successfully");
     } else {
       // Add new day off
       const newDayOffData = {
@@ -216,12 +249,12 @@ const handleSubmit = async () => {
       if (isRangeMode.value) {
         // Validate range
         if (!formData.value.startDate || !formData.value.endDate) {
-          saveError.value = 'Both start and end dates are required for a range';
+          saveError.value = "Both start and end dates are required for a range";
           isLoading.value = false;
           return;
         }
         if (formData.value.startDate > formData.value.endDate) {
-          saveError.value = 'Start date must be on or before end date';
+          saveError.value = "Start date must be on or before end date";
           isLoading.value = false;
           return;
         }
@@ -230,65 +263,70 @@ const handleSubmit = async () => {
       } else {
         // Single day
         if (!formData.value.date) {
-          saveError.value = 'Date is required';
+          saveError.value = "Date is required";
           isLoading.value = false;
           return;
         }
         newDayOffData.date = formData.value.date;
       }
 
-      await store.dispatch('daysOff/addDayOff', newDayOffData);
-      console.log('Day off added successfully');
+      await store.dispatch("daysOff/addDayOff", newDayOffData);
+      console.log("Day off added successfully");
     }
 
     closeModal();
   } catch (error) {
-    saveError.value = error.message || `Failed to ${isEditing.value ? 'update' : 'add'} day off.`;
-    console.error(`Error ${isEditing.value ? 'updating' : 'adding'} day off:`, error);
+    saveError.value =
+      error.message ||
+      `Failed to ${isEditing.value ? "update" : "add"} day off.`;
+    console.error(
+      `Error ${isEditing.value ? "updating" : "adding"} day off:`,
+      error,
+    );
   } finally {
     isLoading.value = false;
   }
 };
 
 const formatDate = (dateString) => {
-  if (!dateString) return '';
+  if (!dateString) return "";
   try {
-    const date = new Date(dateString + 'T00:00:00');
-    if (isNaN(date.getTime())) return 'Invalid Date';
+    const date = new Date(dateString + "T00:00:00");
+    if (isNaN(date.getTime())) return "Invalid Date";
     return date.toLocaleDateString(undefined, {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      weekday: 'short'
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      weekday: "short",
     });
   } catch (e) {
-    return 'Invalid Date';
+    return "Invalid Date";
   }
 };
 
 const calculateDayCount = () => {
   if (!formData.value.startDate || !formData.value.endDate) return 0;
-  
-  const start = new Date(formData.value.startDate + 'T00:00:00');
-  const end = new Date(formData.value.endDate + 'T00:00:00');
+
+  const start = new Date(formData.value.startDate + "T00:00:00");
+  const end = new Date(formData.value.endDate + "T00:00:00");
   const diffTime = Math.abs(end - start);
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
 };
 
 // --- Lifecycle Hooks ---
 const handleEscapeKey = (event) => {
-  if (event.key === 'Escape') {
+  if (event.key === "Escape") {
     closeModal();
   }
 };
 
 onMounted(() => {
   initializeForm();
-  document.addEventListener('keydown', handleEscapeKey);
+  document.addEventListener("keydown", handleEscapeKey);
 });
 
 onUnmounted(() => {
-  document.removeEventListener('keydown', handleEscapeKey);
+  document.removeEventListener("keydown", handleEscapeKey);
 });
 </script>
 
