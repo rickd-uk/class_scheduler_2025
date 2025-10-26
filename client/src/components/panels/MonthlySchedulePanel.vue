@@ -202,7 +202,7 @@ const getScheduleForDate = (dateString) => {
     if (cls.classType === "numbered") {
       const year = cls.yearLevel <= 3 ? cls.yearLevel : cls.yearLevel - 3;
       const level = cls.yearLevel <= 3 ? "J" : "H";
-      shortName = `${year}${level}`;
+      shortName = `${year}${level}-${cls.classNumber}`;
     } else {
       // Take first 2 chars or first letter + number
       shortName = cls.className.substring(0, 2).toUpperCase();
