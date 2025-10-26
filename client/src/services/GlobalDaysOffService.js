@@ -21,39 +21,43 @@ const GlobalDaysOffService = {
 
   /**
    * Adds a new global day off. (Admin only)
-   * @param {object} dayOffData - Object containing { date: 'YYYY-MM-DD', reason?: string, color?: string }.
+   * @param {object} dayOffData - Object containing:
+   *   - For single day: { startDate: 'YYYY-MM-DD', reason?: string, color?: string }
+   *   - For range: { startDate: 'YYYY-MM-DD', endDate: 'YYYY-MM-DD', reason?: string, color?: string }
    * @returns {Promise<AxiosResponse<any>>}
    */
   add(dayOffData) {
     console.log(
       `GlobalDaysOffService: Adding global day off via POST ${GLOBAL_DAYS_OFF_ENDPOINT}`,
+      dayOffData,
     );
     return ApiService.post(GLOBAL_DAYS_OFF_ENDPOINT, dayOffData);
   },
 
   /**
    * Updates the reason/color for an existing global day off. (Admin only)
-   * @param {string} date - The date of the day off to update ('YYYY-MM-DD').
-   * @param {object} data - Object containing updated fields (e.g., { reason: '...', color: '...' }).
+   * @param {number} id - The ID of the day off to update.
+   * @param {object} data - Object containing updated fields (e.g., { reason: '...', color: '...', startDate?: '...', endDate?: '...' }).
    * @returns {Promise<AxiosResponse<any>>}
    */
-  update(date, data) {
-    const url = `${GLOBAL_DAYS_OFF_ENDPOINT}/${date}`;
+  update(id, data) {
+    const url = `${GLOBAL_DAYS_OFF_ENDPOINT}/${id}`;
     console.log(
-      `GlobalDaysOffService: Updating global day off for date ${date} via PUT ${url}`,
+      `GlobalDaysOffService: Updating global day off ID ${id} via PUT ${url}`,
+      data,
     );
     return ApiService.put(url, data);
   },
 
   /**
-   * Deletes a specific global day off by date. (Admin only)
-   * @param {string} date - The date to delete ('YYYY-MM-DD').
+   * Deletes a specific global day off by ID. (Admin only)
+   * @param {number} id - The ID of the day off to delete.
    * @returns {Promise<AxiosResponse<any>>}
    */
-  delete(date) {
-    const url = `${GLOBAL_DAYS_OFF_ENDPOINT}/${date}`;
+  delete(id) {
+    const url = `${GLOBAL_DAYS_OFF_ENDPOINT}/${id}`;
     console.log(
-      `GlobalDaysOffService: Deleting global day off for date ${date} via DELETE ${url}`,
+      `GlobalDaysOffService: Deleting global day off ID ${id} via DELETE ${url}`,
     );
     return ApiService.delete(url);
   },
