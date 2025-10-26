@@ -40,6 +40,7 @@
             'calendar-cell',
             { 'other-month': !cell.isCurrentMonth },
             { today: cell.isToday },
+            { past: cell.isPast },
             { 'day-off': cell.isDayOff },
           ]"
         >
@@ -274,11 +275,13 @@ const calendarCells = computed(() => {
   for (let i = firstDayOfWeek - 1; i >= 0; i--) {
     const day = prevMonthLastDay - i;
     const date = new Date(year, month - 1, day);
+    const dateString = toYYYYMMDD(date);
     cells.push({
       day,
       date: toYYYYMMDD(date),
       isCurrentMonth: false,
       isToday: false,
+      isPast: dateString < today,
       isDayOff: false,
       classes: [],
     });
@@ -296,6 +299,7 @@ const calendarCells = computed(() => {
       date: dateString,
       isCurrentMonth: true,
       isToday: dateString === today,
+      isPast: dateString < today,
       isDayOff,
       dayOffColor: dayOffDetails?.color,
       dayOffReason: dayOffDetails?.reason,
@@ -307,11 +311,13 @@ const calendarCells = computed(() => {
   const remainingCells = 42 - cells.length;
   for (let day = 1; day <= remainingCells; day++) {
     const date = new Date(year, month + 1, day);
+    const dateString = toYYYYMMDD(date);
     cells.push({
       day,
       date: toYYYYMMDD(date),
       isCurrentMonth: false,
       isToday: false,
+      isPast: dateString < today,
       isDayOff: false,
       classes: [],
     });
@@ -424,6 +430,14 @@ onMounted(() => {
 
 .calendar-cell.day-off {
   background-color: #f0f0f0;
+}
+
+.calendar-cell.past {
+  opacity: 0.2;
+}
+
+.calendar-cell.past:not(.today) {
+  background-color: #fafafa;
 }
 
 .cell-date {
