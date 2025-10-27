@@ -88,6 +88,7 @@
               'has-dark-background':
                 !item.isDisabled && isDarkColor(item.color),
             }"
+            :title="getNote(selectedDate, item.periodIndex) || undefined"
           >
             <!-- Toggle Switch -->
             <div class="toggle-container">
@@ -182,6 +183,30 @@ const formatDate = (ds) => {
     day: "numeric",
   });
 };
+
+const tooltip = ref({
+  show: false,
+  text: "",
+  x: 0,
+  y: 0,
+});
+
+const showTooltip = (event, periodIndex) => {
+  const note = getNote(selectedDate.value, periodIndex);
+  if (note) {
+    tooltip.value = {
+      show: true,
+      text: note,
+      x: event.clientX,
+      y: event.clientY,
+    };
+  }
+};
+
+const hideTooltip = () => {
+  tooltip.value.show = false;
+};
+
 const dateToWeekday = (ds) => {
   const d = new Date(ds + "T12:00:00");
   return d.toLocaleDateString("en-US", { weekday: "long" }).toLowerCase();
