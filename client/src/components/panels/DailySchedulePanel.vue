@@ -88,7 +88,8 @@
               'has-dark-background':
                 !item.isDisabled && isDarkColor(item.color),
             }"
-            :title="getNote(selectedDate, item.periodIndex) || undefined"
+            @mouseenter="showTooltip($event, item.periodIndex)"
+            @mouseleave="hideTooltip"
           >
             <!-- Toggle Switch -->
             <div class="toggle-container">
@@ -156,6 +157,18 @@
       @close="closeNoteModal"
       @save="saveClassNote"
     />
+
+    <!-- Custom Tooltip -->
+    <div
+      v-if="tooltip.show"
+      class="custom-tooltip"
+      :style="{
+        left: tooltip.x + 10 + 'px',
+        top: tooltip.y + 10 + 'px',
+      }"
+    >
+      {{ tooltip.text }}
+    </div>
   </div>
 </template>
 
@@ -904,6 +917,22 @@ watch(showDatePicker, async (val) => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* Custom Tooltip */
+.custom-tooltip {
+  position: fixed;
+  background-color: rgba(0, 0, 0, 0.9);
+  color: white;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  font-size: 1rem;
+  max-width: 300px;
+  z-index: 1000;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  white-space: pre-wrap;
+  word-wrap: break-word;
 }
 
 .mt-3 {
