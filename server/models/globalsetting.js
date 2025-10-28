@@ -36,6 +36,13 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         defaultValue: false, // This matches your latest migration
       },
+      weeklyDaysOff: {
+        // Use camelCase here for consistency
+        type: DataTypes.JSON, // Match the database type
+        allowNull: true,
+        defaultValue: [], // Default to an empty array
+        field: "weekly_days_off", // Explicitly map to the snake_case column name
+      },
     },
     {
       sequelize,

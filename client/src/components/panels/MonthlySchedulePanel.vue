@@ -120,6 +120,10 @@ const applyGlobalDaysOff = computed(
   () => store.getters["globalSettings/shouldApplyGlobalDaysOff"],
 );
 
+const globalWeeklyDaysOff = computed(
+  () => store.getters["globalSettings/getWeeklyDaysOff"],
+);
+
 // Formatted month display
 const formattedMonth = computed(() => {
   return currentMonth.value.toLocaleDateString("en-US", {
@@ -219,12 +223,18 @@ const getScheduleForDate = (dateString) => {
   return classDetails;
 };
 
-// Check if a date is a day off
+// Check if a date string (YYYY-MM-DD) is a day off
 const isDayOffDate = (dateString) => {
+  // 1. Check Global Weekly Days Off
+  const currentDayName = dateToWeekday(dateString);
+  if (globalWeeklyDaysOff.value.includes(currentDayName)) {
+    return true;
+  }
+
+  // 2. Check Personal/Global Date-Specific Days Off
   const allDaysOff = applyGlobalDaysOff.value
     ? [...globalDaysOff.value, ...personalDaysOff.value]
     : personalDaysOff.value;
-
   return findDayOffForDate(dateString, allDaysOff) !== null;
 };
 

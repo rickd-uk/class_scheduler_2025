@@ -258,6 +258,10 @@ const classesList = computed(() => store.getters["classes/allClasses"]);
 const globalDaysOff = computed(
   () => store.getters["globalDaysOff/allGlobalDaysOff"],
 );
+const globalWeeklyDaysOff = computed(
+  () => store.getters["globalSettings/getWeeklyDaysOff"],
+);
+
 const applyGlobalDaysOff = computed(
   () => store.getters["globalSettings/shouldApplyGlobalDaysOff"],
 );
@@ -282,43 +286,64 @@ const selectedDate = computed({
   },
 });
 
-// Day off logic
-const isDayOff = computed(() => {
+const dayOffColor = computed(() => {
+  // 1. Check specific days off FIRST
   const allDaysOff = applyGlobalDaysOff.value
     ? [...globalDaysOff.value, ...personalDaysOff.value]
     : personalDaysOff.value;
 
+  const dayOff = findDayOffForDate(selectedDate.value, allDaysOff);
+  if (dayOff) {
+    return dayOff?.color || "#F0F0F0";
+  }
+
+  // 2. Check weekly days off (if no specific day off)
+  const currentDayName = dateToWeekday(selectedDate.value);
+  if (globalWeeklyDaysOff.value.includes(currentDayName)) {
+    return "#E0E0E0"; // Return a default color for "Always Off" days
+  }
+
+  return "#F0F0F0"; // Default fallback
+});
+
+const isDayOff = computed(() => {
+  // 1. Check Global Weekly Days Off
+  const currentDayName = dateToWeekday(selectedDate.value);
+  if (globalWeeklyDaysOff.value.includes(currentDayName)) {
+    return true;
+  }
+
+  // 2. Check Personal/Global Date-Specific Days Off
+  const allDaysOff = applyGlobalDaysOff.value
+    ? [...globalDaysOff.value, ...personalDaysOff.value]
+    : personalDaysOff.value;
   return findDayOffForDate(selectedDate.value, allDaysOff) !== null;
 });
 
-// Replace dayOffColor
-const dayOffColor = computed(() => {
-  const allDaysOff = applyGlobalDaysOff.value
-    ? [...globalDaysOff.value, ...personalDaysOff.value]
-    : personalDaysOff.value;
-
-  const dayOff = findDayOffForDate(selectedDate.value, allDaysOff);
-  return dayOff?.color || "#F0F0F0";
-});
-
-// Replace dayOffReason
 const dayOffReason = computed(() => {
+  // 1. Check specific days off FIRST
   const allDaysOff = applyGlobalDaysOff.value
     ? [...globalDaysOff.value, ...personalDaysOff.value]
     : personalDaysOff.value;
 
   const dayOff = findDayOffForDate(selectedDate.value, allDaysOff);
-  if (!dayOff) return "Day Off";
-
-  const rangeInfo = getDayRangeInfo(selectedDate.value, dayOff);
-  const reason = dayOff.reason || "Day Off";
-
-  // Add day indicator for ranges
-  if (rangeInfo && rangeInfo.totalDays > 1) {
-    return `${reason} (Day ${rangeInfo.dayNumber}/${rangeInfo.totalDays})`;
+  if (dayOff) {
+    const rangeInfo = getDayRangeInfo(selectedDate.value, dayOff);
+    const reason = dayOff.reason || "Day Off";
+    // Add day indicator for ranges
+    if (rangeInfo && rangeInfo.totalDays > 1) {
+      return `${reason} (Day ${rangeInfo.dayNumber}/${rangeInfo.totalDays})`;
+    }
+    return reason;
   }
 
-  return reason;
+  // 2. Check weekly days off (if no specific day off)
+  const currentDayName = dateToWeekday(selectedDate.value);
+  if (globalWeeklyDaysOff.value.includes(currentDayName)) {
+    return "Always Off"; // Add reason for weekly day off
+  }
+
+  return "Day Off"; // Fallback
 });
 
 // Get all disabled periods for this date

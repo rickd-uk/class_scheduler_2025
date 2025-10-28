@@ -19,7 +19,7 @@
               <TextbooksPanel />
               <ClassesPanel />
 
-              <SchoolYearPanel />
+              <!-- <SchoolYearPanel /> -->
               <DaysOffPanel />
               <ExceptionPatternsPanel />
               <template v-if="isAdminUser">

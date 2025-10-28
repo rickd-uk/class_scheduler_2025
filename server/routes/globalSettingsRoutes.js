@@ -74,11 +74,17 @@ router.get("/", async (req, res) => {
       // This shouldn't happen if seeding worked, but handle it
       console.error("Global settings not found in database!");
       // Return default values if not found
-      return res
-        .status(200)
-        .json({ applyGlobalDaysOff: true, applyGlobalExceptions: true });
+      return res.status(200).json({
+        applyGlobalDaysOff: true,
+        applyGlobalExceptions: true,
+        weekly_days_off: [],
+      });
     }
-    res.status(200).json(settings);
+
+    res.status(200).json({
+      ...settings.toJSON(),
+      weekly_days_off: settings.weekly_days_off || [],
+    });
   } catch (error) {
     console.error("Error fetching global settings:", error);
     res.status(500).json({
@@ -127,6 +133,46 @@ router.put("/", authenticateToken, isAdmin, async (req, res) => {
     console.error("Error updating global settings:", error);
     res.status(500).json({
       message: "Error updating global settings",
+      error: error.message,
+    });
+  }
+});
+
+// Put weekly days off
+router.put("/weekly-days-off", authenticateToken, isAdmin, async (req, res) => {
+  try {
+    const { daysOff } = req.body;
+
+    console.log("[Weekly Days Off] Updating with:", daysOff);
+
+    // Find or create the global settings record
+    let settings = await GlobalSetting.findOne({ where: { id: 1 } });
+
+    if (!settings) {
+      console.log("[Weekly Days Off] Creating new settings record");
+      settings = await GlobalSetting.create({
+        id: 1,
+        settingName: "default",
+        weeklyDaysOff: daysOff,
+      });
+    } else {
+      console.log("[Weekly Days Off] Updating existing settings");
+      settings.weeklyDaysOff = daysOff;
+      await settings.save();
+    }
+
+    console.log(
+      "[Weekly Days Off] Updated successfully:",
+      settings.weeklyDaysOff,
+    );
+    res.json({
+      message: "Weekly days off updated",
+      weeklyDaysOff: settings.weeklyDaysOff,
+    });
+  } catch (error) {
+    console.error("[Weekly Days Off] Error:", error);
+    res.status(500).json({
+      message: "Error updating weekly days off",
       error: error.message,
     });
   }

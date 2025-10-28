@@ -54,6 +54,14 @@ const GlobalSettingsService = {
     );
     return ApiService.put(registrationStatusEndpoint, payload);
   },
+
+  updateWeeklyDaysOff(daysOff) {
+    console.log(
+      "GlobalSettingsService: PUT /global-settings/weekly-days-off",
+      daysOff,
+    );
+    return ApiService.put("/global-settings/weekly-days-off", { daysOff });
+  },
 };
 
 export default GlobalSettingsService;
