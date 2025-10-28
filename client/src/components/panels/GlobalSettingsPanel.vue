@@ -96,7 +96,7 @@
             </p>
           </div>
 
-          <div class="weekly-days-off">
+          <div v-if="!isLoadingAll" class="weekly-days-off">
             <hr />
             <h4 class="weekly-days-title">Days Always Off</h4>
             <div class="weekly-days-grid">
@@ -116,6 +116,7 @@
               </div>
             </div>
           </div>
+          <div v-else class="loading">Loading weekly days off...</div>
         </div>
         <small class="text-muted mt-2 d-block px-3 pb-2">
           Note: Global settings apply to all users. User‐specific settings
@@ -196,7 +197,18 @@ const showSuccessTemporary = (message) => {
   }, 3000);
 };
 
-const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+const capitalize = (s) => {
+  const abbrev = {
+    monday: "Mon",
+    tuesday: "Tue",
+    wednesday: "Wed",
+    thursday: "Thu",
+    friday: "Fri",
+    saturday: "Sat",
+    sunday: "Sun",
+  };
+  return abbrev[s.toLowerCase()] || s;
+};
 
 const isWeeklyDayOff = (day) => {
   return weeklyDaysOff.value.includes(day);
@@ -382,21 +394,32 @@ onMounted(() => {
   color: var(--secondary);
 }
 .weekly-days-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
-  gap: 0.5rem 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  align-items: center;
 }
 .weekly-days-grid .form-check {
-  padding-left: 1.8em;
-  margin-bottom: 0.25rem;
+  display: inline-flex;
+  align-items: center;
+  padding-left: 0;
+  margin-bottom: 0;
 }
 .weekly-days-grid .form-check-input {
-  margin-left: -1.8em;
+  margin: 0;
   cursor: pointer;
+  width: 1.1em;
+  height: 1.1em;
+  flex-shrink: 0;
 }
 .weekly-days-grid .form-check-label {
   cursor: pointer;
-  font-size: 0.9rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  user-select: none;
+  margin-left: 0.4rem;
+  margin-bottom: 0;
+  line-height: 1;
 }
 
 .d-block {

@@ -66,13 +66,13 @@ router.put(
 );
 
 // GET /api/global-settings - Fetch the current settings (accessible to all logged-in users)
-router.get("/", async (req, res) => {
+router.get("/", authenticateToken, async (req, res) => {
   try {
     // Find the first (and likely only) row
     const settings = await GlobalSetting.findOne();
     if (!settings) {
       // This shouldn't happen if seeding worked, but handle it
-      console.error("Global settings not found in database!");
+      console.log("No global settings found in DB, returning defaults.");
       // Return default values if not found
       return res.status(200).json({
         applyGlobalDaysOff: true,
@@ -81,9 +81,10 @@ router.get("/", async (req, res) => {
       });
     }
 
+    // FIXED: Access the camelCase property weeklyDaysOff from the model
     res.status(200).json({
       ...settings.toJSON(),
-      weekly_days_off: settings.weekly_days_off || [],
+      weekly_days_off: settings.weeklyDaysOff || [],
     });
   } catch (error) {
     console.error("Error fetching global settings:", error);
@@ -138,7 +139,7 @@ router.put("/", authenticateToken, isAdmin, async (req, res) => {
   }
 });
 
-// Put weekly days off
+// PUT weekly days off
 router.put("/weekly-days-off", authenticateToken, isAdmin, async (req, res) => {
   try {
     const { daysOff } = req.body;
