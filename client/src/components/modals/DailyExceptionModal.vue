@@ -223,16 +223,50 @@ const handleSaveException = async () => {
       
     // APPLY
     } else {
-      const payload = {
-        date: date.value,
-        isDayOff: exceptionType.value === 'dayOff',
-        exceptionPatternId: exceptionType.value === 'pattern' ? selectedPatternId.value : null,
-        reason: exceptionType.value === 'dayOff' ? dayOffDetails.reason
-          : exceptionType.value === 'pattern' ? patternDetails.notes
-            : null,
-        color: exceptionType.value === 'dayOff' ? dayOffDetails.color : null,
-      };
-      
+       // Get existing notes and disabled periods to preserve them
+  const currentException = existingException.value;
+  let existingDisabled = [];
+  let existingNotes = {};
+  
+  if (currentException && currentException.reason) {
+    try {
+      const data = JSON.parse(currentException.reason);
+      if (data.disabled && Array.isArray(data.disabled)) {
+        existingDisabled = data.disabled;
+      }
+      if (data.notes && typeof data.notes === 'object') {
+        existingNotes = data.notes;
+      }
+    } catch (e) {
+      // Ignore parse errors
+    }
+  }
+  
+  // Build the reason field based on exception type
+  let reasonField;
+  if (exceptionType.value === 'dayOff') {
+    reasonField = dayOffDetails.reason;
+  } else if (exceptionType.value === 'pattern') {
+    // For patterns, preserve existing notes and disabled periods
+    reasonField = JSON.stringify({
+      disabled: existingDisabled,
+      notes: existingNotes
+    });
+  } else {
+    reasonField = null;
+  }
+  
+  const payload = {
+    date: date.value,
+    isDayOff: exceptionType.value === 'dayOff',
+    exceptionPatternId: exceptionType.value === 'pattern' ? selectedPatternId.value : null,
+    reason: reasonField,
+    color: exceptionType.value === 'dayOff' ? dayOffDetails.color : null,
+  };
+
+
+
+
       if (exceptionType.value === 'pattern' && !payload.exceptionPatternId) {
         saveError.value = 'Please select a pattern.';
         isLoading.value = false;
