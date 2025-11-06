@@ -155,7 +155,7 @@ const getScheduleForDate = (dateString) => {
   const exc = getAppliedExceptionForDate(dateString);
 
   const disabledPeriods = new Set();
-  if (exc && !exc.isDayOff && !exc.exceptionPatternId && exc.reason) {
+  if (exc && !exc.isDayOff && exc.reason) {
     try {
       const data = JSON.parse(exc.reason);
       if (data.disabled && Array.isArray(data.disabled)) {

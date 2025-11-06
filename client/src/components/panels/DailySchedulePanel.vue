@@ -352,7 +352,7 @@ const disabledPeriods = computed(() => {
   const disabled = new Set();
 
   // Only check for disabled periods if there's an exception that's not a pattern or day-off
-  if (exc && !exc.isDayOff && !exc.exceptionPatternId && exc.reason) {
+  if (exc && !exc.isDayOff && exc.reason) {
     try {
       const data = JSON.parse(exc.reason);
       if (data.disabled && Array.isArray(data.disabled)) {
@@ -469,7 +469,7 @@ const disablePeriod = async (periodIndex) => {
   const payload = {
     date: selectedDate.value,
     isDayOff: false,
-    exceptionPatternId: null,
+    exceptionPatternId: exc?.exceptionPatternId || null,
     reason: JSON.stringify({ disabled: disabledList, notes }),
     color: null,
   };
@@ -508,7 +508,7 @@ const enablePeriod = async (periodIndex) => {
     const payload = {
       date: selectedDate.value,
       isDayOff: false,
-      exceptionPatternId: null,
+      exceptionPatternId: exc?.exceptionPatternId || null,
       reason: JSON.stringify({ disabled: disabledList, notes }),
       color: null,
     };
@@ -572,7 +572,7 @@ const saveClassNote = async (note) => {
       const payload = {
         date,
         isDayOff: false,
-        exceptionPatternId: null,
+        exceptionPatternId: exc?.exceptionPatternId || null,
         reason: JSON.stringify({ disabled: disabledList, notes }),
         color: null,
       };
