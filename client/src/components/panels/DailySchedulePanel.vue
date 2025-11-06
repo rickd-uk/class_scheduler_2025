@@ -66,6 +66,11 @@
       >
         <h3>Day Off</h3>
         <p>{{ dayOffReason }}</p>
+        <div class="exception-controls mt-3">
+        <button class="btn btn-secondary btn-sm" @click="openExceptionModal">
+          Edit Exceptions
+        </button>
+      </div>
       </div>
 
       <!-- Otherwise show schedule or placeholder -->
