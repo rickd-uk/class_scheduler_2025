@@ -64,13 +64,7 @@
         :style="{ backgroundColor: dayOffColor || '#F0F0F0' }"
         :class="{ 'has-dark-background': isDarkColor(dayOffColor) }"
       >
-        <h3>Day Off</h3>
         <p>{{ dayOffReason }}</p>
-        <div class="exception-controls mt-3">
-        <button class="btn btn-secondary btn-sm" @click="openExceptionModal">
-          Edit Exceptions
-        </button>
-      </div>
       </div>
 
       <!-- Otherwise show schedule or placeholder -->
@@ -326,7 +320,13 @@ const isDayOff = computed(() => {
 });
 
 const dayOffReason = computed(() => {
-  // 1. Check specific days off FIRST
+  // 1. Check applied exceptions FIRST
+  const exc = getAppliedExceptionForDate(selectedDate.value);
+  if (exc && exc.isDayOff) {
+    return exc.reason || "Day Off";
+  }
+
+  // 2. Check specific days off
   const allDaysOff = applyGlobalDaysOff.value
     ? [...globalDaysOff.value, ...personalDaysOff.value]
     : personalDaysOff.value;
@@ -335,20 +335,19 @@ const dayOffReason = computed(() => {
   if (dayOff) {
     const rangeInfo = getDayRangeInfo(selectedDate.value, dayOff);
     const reason = dayOff.reason || "Day Off";
-    // Add day indicator for ranges
     if (rangeInfo && rangeInfo.totalDays > 1) {
       return `${reason} (Day ${rangeInfo.dayNumber}/${rangeInfo.totalDays})`;
     }
     return reason;
   }
 
-  // 2. Check weekly days off (if no specific day off)
+  // 3. Check weekly days off
   const currentDayName = dateToWeekday(selectedDate.value);
   if (globalWeeklyDaysOff.value.includes(currentDayName)) {
-    return "Always Off"; // Add reason for weekly day off
+    return "Always Off";
   }
 
-  return "Day Off"; // Fallback
+  return "Day Off";
 });
 
 // Get all disabled periods for this date
