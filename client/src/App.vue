@@ -37,6 +37,12 @@
                 Weekly Schedule
               </button>
               <button
+                @click="activeTab = 'weekview'"
+                :class="['tab-btn', { active: activeTab === 'weekview' }]"
+              >
+                Week
+              </button>
+              <button
                 @click="activeTab = 'daily'"
                 :class="['tab-btn', { active: activeTab === 'daily' }]"
               >
@@ -137,6 +143,7 @@ import DaysOffPanel from "./components/panels/DaysOffPanel.vue";
 import ExceptionPatternsPanel from "./components/panels/ExceptionPatternsPanel.vue";
 // import TemplatesPanel from './components/panels/TemplatesPanel.vue'; // Was commented out
 import WeeklySchedulePanel from "./components/panels/WeeklySchedulePanel.vue";
+import WeeklyViewPanel from "./components/panels/WeeklyViewPanel.vue";
 import DailySchedulePanel from "./components/panels/DailySchedulePanel.vue";
 import MonthlySchedulePanel from "./components/panels/MonthlySchedulePanel.vue";
 import GlobalSettingsPanel from "./components/panels/GlobalSettingsPanel.vue";
@@ -204,6 +211,7 @@ watch(
 const componentsMap = markRaw({
   // templates: TemplatesPanel, // Ensure TemplatesPanel is imported if used
   weekly: WeeklySchedulePanel,
+  weekview: WeeklyViewPanel,
   daily: DailySchedulePanel,
   monthly: MonthlySchedulePanel,
 });
