@@ -2,9 +2,9 @@
   <div class="panel daily-schedule-panel">
     <div class="panel-header date-navigation">
       <button
-        @click="goToPreviousMonth"
-        class="nav-button month-nav"
-        title="Previous Month"
+        @click="goToPreviousWeek"
+        class="nav-button week-nav"
+        title="Previous Week"
       >
         &lt;&lt;
       </button>
@@ -43,9 +43,9 @@
         &gt;
       </button>
       <button
-        @click="goToNextMonth"
-        class="nav-button month-nav"
-        title="Next Month"
+        @click="goToNextWeek"
+        class="nav-button week-nav"
+        title="Next Week"
       >
         &gt;&gt;
       </button>
@@ -64,7 +64,6 @@
         :style="{ backgroundColor: dayOffColor || '#F0F0F0' }"
         :class="{ 'has-dark-background': isDarkColor(dayOffColor) }"
       >
-        <h3>Day Off</h3>
         <p>{{ dayOffReason }}</p>
       </div>
 
@@ -321,7 +320,13 @@ const isDayOff = computed(() => {
 });
 
 const dayOffReason = computed(() => {
-  // 1. Check specific days off FIRST
+  // 1. Check applied exceptions FIRST
+  const exc = getAppliedExceptionForDate(selectedDate.value);
+  if (exc && exc.isDayOff) {
+    return exc.reason || "Day Off";
+  }
+
+  // 2. Check specific days off
   const allDaysOff = applyGlobalDaysOff.value
     ? [...globalDaysOff.value, ...personalDaysOff.value]
     : personalDaysOff.value;
@@ -330,20 +335,19 @@ const dayOffReason = computed(() => {
   if (dayOff) {
     const rangeInfo = getDayRangeInfo(selectedDate.value, dayOff);
     const reason = dayOff.reason || "Day Off";
-    // Add day indicator for ranges
     if (rangeInfo && rangeInfo.totalDays > 1) {
       return `${reason} (Day ${rangeInfo.dayNumber}/${rangeInfo.totalDays})`;
     }
     return reason;
   }
 
-  // 2. Check weekly days off (if no specific day off)
+  // 3. Check weekly days off
   const currentDayName = dateToWeekday(selectedDate.value);
   if (globalWeeklyDaysOff.value.includes(currentDayName)) {
-    return "Always Off"; // Add reason for weekly day off
+    return "Always Off";
   }
 
-  return "Day Off"; // Fallback
+  return "Day Off";
 });
 
 // Get all disabled periods for this date
@@ -352,7 +356,7 @@ const disabledPeriods = computed(() => {
   const disabled = new Set();
 
   // Only check for disabled periods if there's an exception that's not a pattern or day-off
-  if (exc && !exc.isDayOff && !exc.exceptionPatternId && exc.reason) {
+  if (exc && !exc.isDayOff && exc.reason) {
     try {
       const data = JSON.parse(exc.reason);
       if (data.disabled && Array.isArray(data.disabled)) {
@@ -469,7 +473,7 @@ const disablePeriod = async (periodIndex) => {
   const payload = {
     date: selectedDate.value,
     isDayOff: false,
-    exceptionPatternId: null,
+    exceptionPatternId: exc?.exceptionPatternId || null,
     reason: JSON.stringify({ disabled: disabledList, notes }),
     color: null,
   };
@@ -508,7 +512,7 @@ const enablePeriod = async (periodIndex) => {
     const payload = {
       date: selectedDate.value,
       isDayOff: false,
-      exceptionPatternId: null,
+      exceptionPatternId: exc?.exceptionPatternId || null,
       reason: JSON.stringify({ disabled: disabledList, notes }),
       color: null,
     };
@@ -572,7 +576,7 @@ const saveClassNote = async (note) => {
       const payload = {
         date,
         isDayOff: false,
-        exceptionPatternId: null,
+        exceptionPatternId: exc?.exceptionPatternId || null,
         reason: JSON.stringify({ disabled: disabledList, notes }),
         color: null,
       };
@@ -617,15 +621,15 @@ const changeDay = (days) => {
   d.setDate(d.getDate() + days);
   selectedDate.value = toYYYYMMDD(d);
 };
-const changeMonth = (months) => {
+const changeWeek = (weeks) => {
   const d = new Date(selectedDate.value + "T12:00:00");
-  d.setMonth(d.getMonth() + months);
+  d.setDate(d.getDate() + (weeks * 7));
   selectedDate.value = toYYYYMMDD(d);
 };
 const goToPreviousDay = () => changeDay(-1);
 const goToNextDay = () => changeDay(1);
-const goToPreviousMonth = () => changeMonth(-1);
-const goToNextMonth = () => changeMonth(1);
+const goToPreviousWeek = () => changeWeek(-1);
+const goToNextWeek = () => changeWeek(1);
 
 // Open exception modal
 const openExceptionModal = () => {
@@ -888,6 +892,25 @@ watch(showDatePicker, async (val) => {
   background-color: #eee;
 }
 
+
+
+/* Day navigation - larger for primary action */
+.day-nav {
+  font-size: 1.2rem;
+  font-weight: bold;
+  padding: 0.7rem 1.2rem;
+  min-width: 50px;
+}
+
+/* Week navigation - slightly smaller */
+.week-nav {
+  font-size: 1rem;
+  padding: 0.6rem 1rem;
+  opacity: 0.9;
+}
+
+
+
 .relative-date-indicator {
   font-size: 0.8rem;
   color: var(--secondary);
@@ -895,22 +918,30 @@ watch(showDatePicker, async (val) => {
   margin-top: -2px;
 }
 
+
+/* Navigation buttons - improved for mobile */
 .nav-button {
-  background: none;
-  border: 1px solid transparent;
-  padding: 0.1rem 0.5rem;
-  font-size: 1.2rem;
-  font-weight: bold;
-  line-height: 1;
+  background-color: var(--primary);
+  color: white;
+  border: none;
+  padding: 0.6rem 1rem;
   cursor: pointer;
-  color: var(--primary);
-  border-radius: 4px;
-  transition: background-color 0.2s;
+  font-size: 1rem;
+  border-radius: var(--border-radius);
+  transition: background-color 0.2s ease;
+  min-width: 44px; /* Minimum touch target size */
+  min-height: 44px;
 }
 
 .nav-button:hover {
-  background-color: #e0e0e0;
+  background-color: var(--primary-dark);
 }
+
+.nav-button:active {
+  transform: scale(0.95);
+}
+
+
 
 .nav-button.month-nav {
   font-size: 1rem;
@@ -963,4 +994,27 @@ watch(showDatePicker, async (val) => {
 .mt-3 {
   margin-top: 1rem;
 }
+
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+  .panel-header.date-navigation {
+    gap: 0.3rem;
+  }
+  
+  .nav-button {
+    min-width: 48px;
+    min-height: 48px;
+  }
+  
+  .day-nav {
+    font-size: 1.3rem;
+    min-width: 60px;
+  }
+  
+  .date-title {
+    font-size: 0.9rem;
+  }
+}
+
 </style>

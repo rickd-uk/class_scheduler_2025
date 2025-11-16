@@ -12,10 +12,6 @@
           <label>Exception Type:</label>
           <div class="radio-group">
             <label>
-              <input type="radio" v-model="exceptionType" value="dayOff" name="exType">
-              Mark as Day Off
-            </label>
-            <label>
               <input type="radio" v-model="exceptionType" value="pattern" name="exType">
               Apply Schedule Pattern
             </label>
@@ -26,19 +22,7 @@
           </div>
         </div>
 
-        <div v-if="exceptionType === 'dayOff'" class="day-off-fields">
-          <div class="form-group">
-            <label for="ex-dayoff-reason">Reason (Optional)</label>
-            <input type="text" id="ex-dayoff-reason" v-model="dayOffDetails.reason" class="form-control form-control-sm"
-              placeholder="e.g., Holiday, Conference" :disabled="isLoading" />
-          </div>
-          <div class="form-group">
-            <label for="ex-dayoff-color">Color</label>
-            <input type="color" id="ex-dayoff-color" v-model="dayOffDetails.color"
-              class="form-control form-control-sm form-control-color" :disabled="isLoading">
-          </div>
-        </div>
-
+        
         <div v-if="exceptionType === 'pattern'" class="pattern-fields">
           <div class="form-group">
             <label for="ex-pattern-select">Select Pattern:</label>
@@ -61,8 +45,8 @@
         </div>
 
         <div v-if="exceptionType === 'clear'" class="clear-explanation">
-          <p>This will remove any specific day off or pattern applied to this date, reverting it to the regular weekly
-            schedule.</p>
+          <p>This will remove any schedule pattern or day-off status applied to this date, reverting it to the regular weekly schedule.</p>
+          <p class="preserve-note"><strong>Note:</strong> Any notes or individual class toggles will be preserved.</p>
         </div>
       </div>
 
@@ -91,7 +75,6 @@ const isLoading = ref(false);
 const saveError = ref(null);
 const exceptionType = ref('clear');
 const selectedPatternId = ref('');
-const dayOffDetails = reactive({ reason: '', color: '#F0F0F0' });
 const patternDetails = reactive({ notes: '' });
 
 // Modal data
@@ -116,8 +99,6 @@ const formattedDate = computed(() => {
 // Reset helper
 const resetFields = () => {
   selectedPatternId.value = '';
-  dayOffDetails.reason = '';
-  dayOffDetails.color = '#F0F0F0';
   patternDetails.notes = '';
 };
 
@@ -125,22 +106,170 @@ const resetFields = () => {
 watch(existingException, (ex) => {
   saveError.value = null;
   resetFields();
+  
   if (!ex) {
     exceptionType.value = 'clear';
     return;
   }
+  
   if (ex.isDayOff) {
-    exceptionType.value = 'dayOff';
-    dayOffDetails.reason = ex.reason || '';
-    dayOffDetails.color = ex.color || '#F0F0F0';
+    exceptionType.value = 'clear';
   } else if (ex.exceptionPatternId) {
+    // Pattern exception
     exceptionType.value = 'pattern';
     selectedPatternId.value = ex.exceptionPatternId;
-    patternDetails.notes = ex.reason || '';
+    
+    // Try to extract pattern notes from JSON reason field
+    if (ex.reason) {
+      try {
+        const data = JSON.parse(ex.reason);
+        // Pattern notes might be stored separately or not at all in current implementation
+        // For now, just clear the notes field for patterns
+        patternDetails.notes = '';
+      } catch (e) {
+        // If it's not JSON, treat it as plain text notes
+        patternDetails.notes = ex.reason || '';
+      }
+    }
   } else {
+    // No pattern and not a day off - could be notes/toggles only
+    // Default to 'clear' since there's no UI for managing notes/toggles in this modal
     exceptionType.value = 'clear';
   }
 }, { immediate: true });
+
+
+const handleSaveException = async () => {
+  if (!date.value) { 
+    saveError.value = 'Date missing.'; 
+    return; 
+  }
+  
+  isLoading.value = true;
+  saveError.value = null;
+  
+  try {
+    // CLEAR
+    if (exceptionType.value === 'clear') {
+      // Check if there are any notes or disabled periods to preserve
+      const currentException = existingException.value;
+      
+      if (currentException && currentException.reason) {
+        try {
+          const data = JSON.parse(currentException.reason);
+          const hasDisabled = data.disabled && Array.isArray(data.disabled) && data.disabled.length > 0;
+          const hasNotes = data.notes && Object.keys(data.notes).length > 0;
+          
+          // If there are notes or disabled periods, preserve them
+          if (hasDisabled || hasNotes) {
+            const payload = {
+              date: date.value,
+              isDayOff: false,
+              exceptionPatternId: null,
+              reason: JSON.stringify({ 
+                disabled: data.disabled || [], 
+                notes: data.notes || {} 
+              }),
+              color: null,
+            };
+            
+            if (isGlobal.value) {
+              await store.dispatch('globalAppliedExceptions/applyGlobalException', payload);
+            } else {
+              await store.dispatch('schedule/applyException', payload);
+            }
+          } else {
+            // No notes or disabled periods, safe to fully delete
+            if (isGlobal.value) {
+              await store.dispatch('globalAppliedExceptions/deleteGlobalException', date.value);
+            } else {
+              await store.dispatch('schedule/clearAppliedException', date.value);
+            }
+          }
+        } catch (e) {
+          // If parsing fails, just clear completely
+          if (isGlobal.value) {
+            await store.dispatch('globalAppliedExceptions/deleteGlobalException', date.value);
+          } else {
+            await store.dispatch('schedule/clearAppliedException', date.value);
+          }
+        }
+      } else {
+        // No existing exception or no reason field, safe to clear
+        if (isGlobal.value) {
+          await store.dispatch('globalAppliedExceptions/deleteGlobalException', date.value);
+        } else {
+          await store.dispatch('schedule/clearAppliedException', date.value);
+        }
+      }
+      
+    // APPLY
+    } else {
+      // Get existing notes and disabled periods to preserve them
+      const currentException = existingException.value;
+      let existingDisabled = [];
+      let existingNotes = {};
+      
+      if (currentException && currentException.reason) {
+        try {
+          const data = JSON.parse(currentException.reason);
+          if (data.disabled && Array.isArray(data.disabled)) {
+            existingDisabled = data.disabled;
+          }
+          if (data.notes && typeof data.notes === 'object') {
+            existingNotes = data.notes;
+          }
+        } catch (e) {
+          // Ignore parse errors - not JSON format
+        }
+      }
+      
+      // Build the reason field based on exception type
+      let reasonField;
+      if (exceptionType.value === 'dayOff') {
+        reasonField = dayOffDetails.reason;
+      } else if (exceptionType.value === 'pattern') {
+        // For patterns, preserve existing notes and disabled periods
+        reasonField = JSON.stringify({
+          disabled: existingDisabled,
+          notes: existingNotes
+        });
+      } else {
+        reasonField = null;
+      }
+      
+      const payload = {
+        date: date.value,
+        isDayOff: exceptionType.value === 'dayOff',
+        exceptionPatternId: exceptionType.value === 'pattern' ? selectedPatternId.value : null,
+        reason: reasonField,
+        color: exceptionType.value === 'dayOff' ? dayOffDetails.color : null,
+      };
+      
+      if (exceptionType.value === 'pattern' && !payload.exceptionPatternId) {
+        saveError.value = 'Please select a pattern.';
+        isLoading.value = false;
+        return;
+      }
+      
+      if (isGlobal.value) {
+        await store.dispatch('globalAppliedExceptions/applyGlobalException', payload);
+      } else {
+        await store.dispatch('schedule/applyException', payload);
+      }
+    }
+    
+    // Close the modal after successful save
+    closeModal();
+    
+  } catch (err) {
+    console.error('Error in handleSaveException:', err);
+    saveError.value = err.message || 'Failed to save.';
+  } finally {
+    isLoading.value = false;
+  }
+};
+
 
 // Fetch patterns on open
 watch(() => store.state.ui.modals.dailyException, (open) => {
@@ -156,55 +285,6 @@ const closeModal = () => {
 };
 
 // Save/clear
-const handleSaveException = async () => {
-  if (!date.value) { saveError.value = 'Date missing.'; return; }
-
-  isLoading.value = true;
-  saveError.value = null;
-
-  try {
-    // CLEAR
-    if (exceptionType.value === 'clear') {
-      if (isGlobal.value) {
-        await store.dispatch('globalAppliedExceptions/deleteGlobalException', date.value);
-      } else {
-        await store.dispatch('schedule/clearAppliedException', date.value);
-      }
-
-      // APPLY
-    } else {
-      const payload = {
-        date: date.value,
-        isDayOff: exceptionType.value === 'dayOff',
-        exceptionPatternId: exceptionType.value === 'pattern' ? selectedPatternId.value : null,
-        reason: exceptionType.value === 'dayOff' ? dayOffDetails.reason
-          : exceptionType.value === 'pattern' ? patternDetails.notes
-            : null,
-        color: exceptionType.value === 'dayOff' ? dayOffDetails.color : null,
-      };
-
-      if (exceptionType.value === 'pattern' && !payload.exceptionPatternId) {
-        saveError.value = 'Please select a pattern.';
-        isLoading.value = false;
-        return;
-      }
-
-      if (isGlobal.value) {
-        await store.dispatch('globalAppliedExceptions/applyGlobalException', payload);
-      } else {
-        await store.dispatch('schedule/applyException', payload);
-      }
-    }
-
-    closeModal();
-
-  } catch (err) {
-    saveError.value = err.message || 'Failed to save.';
-  } finally {
-    isLoading.value = false;
-  }
-};
-
 // Escape key
 const handleEscapeKey = e => { if (e.key === 'Escape') closeModal(); };
 onMounted(() => document.addEventListener('keydown', handleEscapeKey));
@@ -339,4 +419,11 @@ hr {
   font-size: 0.9rem;
   color: var(--secondary);
 }
+
+.preserve-note {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--info);
+}
+
 </style>

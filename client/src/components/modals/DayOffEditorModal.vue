@@ -45,7 +45,7 @@
             v-model="formData.date"
             class="form-control form-control-sm"
             required
-            :disabled="isLoading || isEditing"
+            :disabled="isLoading"
           />
         </div>
 
@@ -61,7 +61,7 @@
               v-model="formData.startDate"
               class="form-control form-control-sm"
               required
-              :disabled="isLoading || isEditing"
+              :disabled="isLoading"
             />
           </div>
           <div class="form-group">
@@ -74,7 +74,7 @@
               v-model="formData.endDate"
               class="form-control form-control-sm"
               required
-              :disabled="isLoading || isEditing"
+              :disabled="isLoading"
               :min="formData.startDate"
             />
           </div>
@@ -171,8 +171,24 @@ const formData = ref({
 });
 
 // --- Initialize Form ---
+// --- Initialize Form ---
 const initializeForm = () => {
-  if (isEditing.value) {
+  // Helper to get today's date in YYYY-MM-DD format
+  const getTodayString = () => {
+    const today = new Date();
+    const offset = today.getTimezoneOffset() * 60000;
+    return new Date(today.getTime() - offset).toISOString().split('T')[0];
+  };
+  
+  // Helper to get tomorrow's date in YYYY-MM-DD format
+  const getTomorrowString = () => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const offset = tomorrow.getTimezoneOffset() * 60000;
+    return new Date(tomorrow.getTime() - offset).toISOString().split('T')[0];
+  };
+
+   if (isEditing.value) {
     const dayOff = currentDayOff.value;
     formData.value = {
       date: dayOff.date || "",
@@ -183,11 +199,14 @@ const initializeForm = () => {
     };
     isRangeMode.value = isRange.value;
   } else {
-    // Reset form for adding new
+    // Reset form for adding new - set default dates to today/tomorrow
+    const today = getTodayString();
+    const tomorrow = getTomorrowString();
+    
     formData.value = {
-      date: "",
-      startDate: "",
-      endDate: "",
+      date: today,           // Default to today for single day
+      startDate: today,      // Default to today for range start
+      endDate: tomorrow,     // Default to tomorrow for range end
       reason: "",
       color: "#F0F0F0",
     };
@@ -224,6 +243,13 @@ const handleSubmit = async () => {
         color: formData.value.color,
       };
 
+      // Allow changing dates when editing
+      if (isRange.value) {
+        updateData.startDate = formData.value.startDate;
+        updateData.endDate = formData.value.endDate;
+      } else {
+        updateData.date = formData.value.date;
+      }
       // Note: We don't allow changing the date/range when editing
       // If you want to allow that, add startDate/endDate to updateData
 
