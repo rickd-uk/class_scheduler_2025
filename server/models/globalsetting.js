@@ -43,6 +43,12 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: [], // Default to an empty array
         field: "weekly_days_off", // Explicitly map to the snake_case column name
       },
+      hideWeeklyDaysOff: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+        field: "hide_weekly_days_off",
+      },
     },
     {
       sequelize,

@@ -62,6 +62,16 @@ const GlobalSettingsService = {
     );
     return ApiService.put("/global-settings/weekly-days-off", { daysOff });
   },
+
+  updateHideWeeklyDaysOff(hideWeeklyDaysOff) {
+    console.log(
+      "GlobalSettingsService: Updating hide weekly days off to",
+      hideWeeklyDaysOff,
+    );
+    return ApiService.put("/global-settings/hide-weekly-days-off", {
+      hideWeeklyDaysOff,
+    });
+  },
 };
 
 export default GlobalSettingsService;

@@ -196,6 +196,10 @@ const dateToWeekday = (ds) => {
   return days[date.getDay()];
 };
 
+const hideWeeklyDaysOff = computed(
+  () => store.getters["globalSettings/shouldHideWeeklyDaysOff"] || false,
+);
+
 // State
 const currentWeekStart = ref(getWeekStart(new Date()));
 const togglingCell = ref(null);
@@ -273,6 +277,16 @@ const weekDays = computed(() => {
       month: "numeric",
       day: "numeric",
     });
+
+    const weekdayName = dateToWeekday(dateString);
+
+    // Skip this day if it's always off and hide setting is enabled
+    if (
+      hideWeeklyDaysOff.value &&
+      globalWeeklyDaysOff.value.includes(weekdayName)
+    ) {
+      continue;
+    }
 
     // Check if this day is off
     const allDaysOff = applyGlobalDaysOff.value

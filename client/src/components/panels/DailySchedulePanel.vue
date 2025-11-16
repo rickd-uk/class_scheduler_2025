@@ -196,6 +196,10 @@ const formatDate = (ds) => {
   });
 };
 
+const hideWeeklyDaysOff = computed(
+  () => store.getters["globalSettings/shouldHideWeeklyDaysOff"] || false,
+);
+
 const tooltip = ref({
   show: false,
   text: "",
@@ -615,15 +619,40 @@ const hasNote = (date, periodIndex) => {
   return getNote(date, periodIndex).trim() !== "";
 };
 
-// Navigation
 const changeDay = (days) => {
-  const d = new Date(selectedDate.value + "T12:00:00");
-  d.setDate(d.getDate() + days);
-  selectedDate.value = toYYYYMMDD(d);
+  let newDate = new Date(selectedDate.value + "T12:00:00");
+  let attempts = 0;
+  const maxAttempts = 14; // Prevent infinite loop
+
+  do {
+    newDate.setDate(newDate.getDate() + (days > 0 ? 1 : -1));
+    attempts++;
+
+    const dateString = toYYYYMMDD(newDate);
+    const weekdayName = dateToWeekday(dateString);
+
+    // If hiding is enabled and this is an always-off day, continue to next day
+    if (
+      hideWeeklyDaysOff.value &&
+      globalWeeklyDaysOff.value.includes(weekdayName)
+    ) {
+      continue;
+    }
+
+    // Found a valid day
+    selectedDate.value = dateString;
+    return;
+  } while (attempts < maxAttempts);
+
+  // Fallback: just move the requested days without checking
+  const fallbackDate = new Date(selectedDate.value + "T12:00:00");
+  fallbackDate.setDate(fallbackDate.getDate() + days);
+  selectedDate.value = toYYYYMMDD(fallbackDate);
 };
+
 const changeWeek = (weeks) => {
   const d = new Date(selectedDate.value + "T12:00:00");
-  d.setDate(d.getDate() + (weeks * 7));
+  d.setDate(d.getDate() + weeks * 7);
   selectedDate.value = toYYYYMMDD(d);
 };
 const goToPreviousDay = () => changeDay(-1);
@@ -892,8 +921,6 @@ watch(showDatePicker, async (val) => {
   background-color: #eee;
 }
 
-
-
 /* Day navigation - larger for primary action */
 .day-nav {
   font-size: 1.2rem;
@@ -909,15 +936,12 @@ watch(showDatePicker, async (val) => {
   opacity: 0.9;
 }
 
-
-
 .relative-date-indicator {
   font-size: 0.8rem;
   color: var(--secondary);
   font-weight: normal;
   margin-top: -2px;
 }
-
 
 /* Navigation buttons - improved for mobile */
 .nav-button {
@@ -940,8 +964,6 @@ watch(showDatePicker, async (val) => {
 .nav-button:active {
   transform: scale(0.95);
 }
-
-
 
 .nav-button.month-nav {
   font-size: 1rem;
@@ -995,26 +1017,24 @@ watch(showDatePicker, async (val) => {
   margin-top: 1rem;
 }
 
-
 /* Mobile optimizations */
 @media (max-width: 768px) {
   .panel-header.date-navigation {
     gap: 0.3rem;
   }
-  
+
   .nav-button {
     min-width: 48px;
     min-height: 48px;
   }
-  
+
   .day-nav {
     font-size: 1.3rem;
     min-width: 60px;
   }
-  
+
   .date-title {
     font-size: 0.9rem;
   }
 }
-
 </style>

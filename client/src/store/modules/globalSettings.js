@@ -9,6 +9,7 @@ export default {
     applyGlobalExceptions: false,
     allowRegistration: false,
     weeklyDaysOff: [], // Holds the array like ["monday", "tuesday"]
+    hideWeeklyDaysOff: false,
     isLoading: false,
     isUpdating: false,
     error: null,
@@ -19,6 +20,7 @@ export default {
     shouldApplyGlobalExceptions: (state) => state.applyGlobalExceptions,
     isRegistrationAllowed: (state) => state.allowRegistration,
     getWeeklyDaysOff: (state) => state.weeklyDaysOff || [], // Ensure it returns an array
+    shouldHideWeeklyDaysOff: (state) => state.hideWeeklyDaysOff,
     isLoading: (state) => state.isLoading,
     isUpdating: (state) => state.isUpdating,
     error: (state) => state.error,
@@ -32,6 +34,14 @@ export default {
       console.log(
         "[Vuex Mutation] SET_WEEKLY_DAYS_OFF updated:",
         state.weeklyDaysOff,
+      );
+    },
+
+    SET_HIDE_WEEKLY_DAYS_OFF(state, value) {
+      state.hideWeeklyDaysOff = !!value;
+      console.log(
+        "[Vuex Mutation] SET_HIDE_WEEKLY_DAYS_OFF:",
+        state.hideWeeklyDaysOff,
       );
     },
 
@@ -53,6 +63,8 @@ export default {
         "[Vuex Mutation] state.weeklyDaysOff AFTER:",
         state.weeklyDaysOff,
       );
+
+      state.hideWeeklyDaysOff = !!settingsPayload.hide_weekly_days_off;
       // --- END FIX ---
     },
 
@@ -140,6 +152,42 @@ export default {
           { type: "error", message: errorMessage },
           { root: true },
         ); // Notify user
+        throw error;
+      } finally {
+        commit("SET_UPDATING", false);
+      }
+    },
+
+    async updateHideWeeklyDaysOff({ commit, dispatch }, hideValue) {
+      console.log("[Vuex Action] updateHideWeeklyDaysOff:", hideValue);
+      commit("SET_UPDATING", true);
+      commit("SET_ERROR", null);
+      try {
+        const response =
+          await GlobalSettingsService.updateHideWeeklyDaysOff(hideValue);
+        commit("SET_HIDE_WEEKLY_DAYS_OFF", response.data.hideWeeklyDaysOff);
+        dispatch(
+          "ui/showNotification",
+          {
+            type: "success",
+            message: "Hide weekly days off setting updated.",
+          },
+          { root: true },
+        );
+      } catch (error) {
+        const errorMessage =
+          error.response?.data?.message ||
+          error.message ||
+          "Failed to update setting";
+        commit("SET_ERROR", errorMessage);
+        dispatch(
+          "ui/showNotification",
+          {
+            type: "error",
+            message: errorMessage,
+          },
+          { root: true },
+        );
         throw error;
       } finally {
         commit("SET_UPDATING", false);

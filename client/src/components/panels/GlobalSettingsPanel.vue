@@ -35,6 +35,26 @@
                 class="form-check-input"
                 type="checkbox"
                 role="switch"
+                id="hideWeeklyDaysOffToggle"
+                :checked="hideWeeklyDaysOff"
+                @change="
+                  updateGeneralSetting(
+                    'hideWeeklyDaysOff',
+                    $event.target.checked,
+                  )
+                "
+                :disabled="isUpdatingGeneral"
+              />
+              <label class="form-check-label" for="hideWeeklyDaysOffToggle">
+                Hide "Always Off" Days in Schedule Views
+              </label>
+            </div>
+
+            <div class="form-check form-switch">
+              <input
+                class="form-check-input"
+                type="checkbox"
+                role="switch"
                 id="applyGlobalExceptionsToggle"
                 :checked="applyGlobalExceptions"
                 @change="
@@ -144,6 +164,10 @@ const isUpdatingRegistration = computed(
   () => store.getters["globalSettings/isUpdating"],
 );
 
+const hideWeeklyDaysOff = computed(
+  () => store.getters["globalSettings/shouldHideWeeklyDaysOff"],
+);
+
 const isUpdatingWeeklyDaysOff = computed(
   () => store.getters["globalSettings/isUpdating"],
 );
@@ -244,24 +268,20 @@ const handleWeeklyDayOffChange = async (day, isChecked) => {
  * Updates general global settings like applyGlobalDaysOff and applyGlobalExceptions.
  */
 const updateGeneralSetting = async (settingKey, value) => {
-  // isUpdatingGeneral.value = true;
   clearMessages();
 
-  const payload = {
-    applyGlobalDaysOff: applyGlobalDaysOff.value,
-    applyGlobalExceptions: applyGlobalExceptions.value,
-    [settingKey]: value,
-  };
-
   try {
-    await store.dispatch("globalSettings/updateGlobalSettings", payload); // Action for these specific settings
-    showSuccessTemporary("Settings updated successfully.");
-  } catch (err) {
-    updateErrorGeneral.value = err.message || "Failed to update setting.";
-    // Re-fetch to revert UI if the store doesn't do it automatically on error
+    if (settingKey === "applyGlobalDaysOff") {
+      await store.dispatch("globalSettings/updateApplyGlobalDaysOff", value);
+    } else if (settingKey === "applyGlobalExceptions") {
+      await store.dispatch("globalSettings/updateApplyGlobalExceptions", value);
+    } else if (settingKey === "hideWeeklyDaysOff") {
+      await store.dispatch("globalSettings/updateHideWeeklyDaysOff", value);
+    }
+    showSuccessTemporary("Setting updated successfully.");
+  } catch (error) {
+    updateErrorGeneral.value = error.message || "Failed to update setting.";
     store.dispatch("globalSettings/fetchGlobalSettings");
-  } finally {
-    //isUpdatingGeneral.value = false;
   }
 };
 

@@ -179,4 +179,46 @@ router.put("/weekly-days-off", authenticateToken, isAdmin, async (req, res) => {
   }
 });
 
+// PUT hide weekly days off toggle
+router.put(
+  "/hide-weekly-days-off",
+  authenticateToken,
+  isAdmin,
+  async (req, res) => {
+    try {
+      const { hideWeeklyDaysOff } = req.body;
+
+      console.log("[Hide Weekly Days Off] Updating to:", hideWeeklyDaysOff);
+
+      let settings = await GlobalSetting.findOne({ where: { id: 1 } });
+
+      if (!settings) {
+        settings = await GlobalSetting.create({
+          id: 1,
+          settingName: "default",
+          hideWeeklyDaysOff: hideWeeklyDaysOff,
+        });
+      } else {
+        settings.hideWeeklyDaysOff = hideWeeklyDaysOff;
+        await settings.save();
+      }
+
+      console.log(
+        "[Hide Weekly Days Off] Updated successfully:",
+        settings.hideWeeklyDaysOff,
+      );
+      res.json({
+        message: "Hide weekly days off setting updated",
+        hideWeeklyDaysOff: settings.hideWeeklyDaysOff,
+      });
+    } catch (error) {
+      console.error("[Hide Weekly Days Off] Error:", error);
+      res.status(500).json({
+        message: "Error updating hide weekly days off setting",
+        error: error.message,
+      });
+    }
+  },
+);
+
 module.exports = router;
