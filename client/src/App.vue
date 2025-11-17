@@ -281,7 +281,7 @@ const loadInitialData = async () => {
 // --- Watch Authentication Status & Initial Global Settings Load ---
 watch(
   isAuthenticated,
-  (newValue, oldValue) => {
+  async (newValue, oldValue) => {
     console.log(
       `[App.vue Watcher] Authentication status changed: ${oldValue} -> ${newValue}`,
     );
@@ -290,7 +290,7 @@ watch(
       console.log(
         "[App.vue Watcher] User is authenticated. Dispatching fetchGlobalSettings then loadInitialData.",
       );
-      store.dispatch("globalSettings/fetchGlobalSettings").then(() => {
+      await store.dispatch("globalSettings/fetchGlobalSettings").then(() => {
         loadInitialData(); // Load other data after global settings are fetched
       });
     } else {
@@ -300,7 +300,7 @@ watch(
       console.log(
         "[App.vue Watcher] User logged out. Dispatching fetchGlobalSettings for auth view.",
       );
-      store.dispatch("globalSettings/fetchGlobalSettings"); // Fetch settings for the logged-out view
+      await store.dispatch("globalSettings/fetchGlobalSettings"); // Fetch settings for the logged-out view
     }
   },
   { immediate: true },

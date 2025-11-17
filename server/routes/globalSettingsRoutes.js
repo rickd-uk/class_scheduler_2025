@@ -131,7 +131,7 @@ router.put(
 );
 
 // GET /api/global-settings - Fetch the current settings (accessible to all logged-in users)
-router.get("/", authenticateToken, async (req, res) => {
+router.get("/", async (req, res) => {
   try {
     // Find the first (and likely only) row
     const settings = await GlobalSetting.findOne();
@@ -142,6 +142,7 @@ router.get("/", authenticateToken, async (req, res) => {
       return res.status(200).json({
         applyGlobalDaysOff: true,
         applyGlobalExceptions: true,
+        allowRegistration: false,
         weekly_days_off: [],
       });
     }
