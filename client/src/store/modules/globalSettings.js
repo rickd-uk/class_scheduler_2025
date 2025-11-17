@@ -64,7 +64,11 @@ export default {
         state.weeklyDaysOff,
       );
 
-      state.hideWeeklyDaysOff = !!settingsPayload.hide_weekly_days_off;
+      state.hideWeeklyDaysOff = !!settingsPayload.hideWeeklyDaysOff;
+      console.log(
+        "[Vuex Mutation] state.weeklyDaysOff AFTER:",
+        state.weeklyDaysOff,
+      );
       // --- END FIX ---
     },
 

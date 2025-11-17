@@ -85,6 +85,7 @@ router.get("/", authenticateToken, async (req, res) => {
     res.status(200).json({
       ...settings.toJSON(),
       weekly_days_off: settings.weeklyDaysOff || [],
+      hideWeeklyDaysOff: settings.hideWeeklyDaysOff || false,
     });
   } catch (error) {
     console.error("Error fetching global settings:", error);
