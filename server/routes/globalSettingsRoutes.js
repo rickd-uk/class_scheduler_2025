@@ -26,6 +26,71 @@ router.get("/registration-status", authenticateToken, async (req, res) => {
   }
 });
 
+// PUT apply global days off
+router.put(
+  "/apply-global-days-off",
+  authenticateToken,
+  isAdmin,
+  async (req, res) => {
+    try {
+      const { applyGlobalDaysOff } = req.body;
+      console.log("[Apply Global Days Off] Updating to:", applyGlobalDaysOff);
+
+      let settings = await GlobalSetting.findOne({ where: { id: 1 } });
+      if (!settings) {
+        return res.status(404).json({ message: "Global settings not found." });
+      }
+
+      settings.applyGlobalDaysOff = applyGlobalDaysOff;
+      await settings.save();
+
+      res.json({
+        message: "Apply global days off updated",
+        applyGlobalDaysOff: settings.applyGlobalDaysOff,
+      });
+    } catch (error) {
+      console.error("[Apply Global Days Off] Error:", error);
+      res
+        .status(500)
+        .json({ message: "Error updating setting", error: error.message });
+    }
+  },
+);
+
+// PUT apply global exceptions
+router.put(
+  "/apply-global-exceptions",
+  authenticateToken,
+  isAdmin,
+  async (req, res) => {
+    try {
+      const { applyGlobalExceptions } = req.body;
+      console.log(
+        "[Apply Global Exceptions] Updating to:",
+        applyGlobalExceptions,
+      );
+
+      let settings = await GlobalSetting.findOne({ where: { id: 1 } });
+      if (!settings) {
+        return res.status(404).json({ message: "Global settings not found." });
+      }
+
+      settings.applyGlobalExceptions = applyGlobalExceptions;
+      await settings.save();
+
+      res.json({
+        message: "Apply global exceptions updated",
+        applyGlobalExceptions: settings.applyGlobalExceptions,
+      });
+    } catch (error) {
+      console.error("[Apply Global Exceptions] Error:", error);
+      res
+        .status(500)
+        .json({ message: "Error updating setting", error: error.message });
+    }
+  },
+);
+
 // PUT to update registration status (Admin only)
 router.put(
   "/registration-status",

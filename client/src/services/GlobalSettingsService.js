@@ -40,6 +40,25 @@ const GlobalSettingsService = {
     return ApiService.get(registrationStatusEndpoint);
   },
 
+  updateApplyGlobalDaysOff(applyGlobalDaysOff) {
+    console.log(
+      "GlobalSettingsService: Updating apply global days off to",
+      applyGlobalDaysOff,
+    );
+    return ApiService.put("/global-settings/apply-global-days-off", {
+      applyGlobalDaysOff,
+    });
+  },
+
+  updateApplyGlobalExceptions(applyGlobalExceptions) {
+    console.log(
+      "GlobalSettingsService: Updating apply global exceptions to",
+      applyGlobalExceptions,
+    );
+    return ApiService.put("/global-settings/apply-global-exceptions", {
+      applyGlobalExceptions,
+    });
+  },
   /**
    * Update the registration status (admin only).
    * Assumes a dedicated endpoint like PUT /api/global-settings/registration-status

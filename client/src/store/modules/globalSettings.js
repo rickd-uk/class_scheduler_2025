@@ -27,6 +27,21 @@ export default {
   },
 
   mutations: {
+    SET_APPLY_GLOBAL_DAYS_OFF(state, value) {
+      state.applyGlobalDaysOff = !!value;
+      console.log(
+        "[Vuex Mutation] SET_APPLY_GLOBAL_DAYS_OFF:",
+        state.applyGlobalDaysOff,
+      );
+    },
+
+    SET_APPLY_GLOBAL_EXCEPTIONS(state, value) {
+      state.applyGlobalExceptions = !!value;
+      console.log(
+        "[Vuex Mutation] SET_APPLY_GLOBAL_EXCEPTIONS:",
+        state.applyGlobalExceptions,
+      );
+    },
     // Mutation to update only weekly days off
     SET_WEEKLY_DAYS_OFF(state, daysOffArray) {
       // Ensure it's always an array
@@ -123,6 +138,81 @@ export default {
         console.error("Error fetching global settings:", err);
       } finally {
         commit("SET_LOADING", false);
+      }
+    },
+
+    async updateApplyGlobalDaysOff({ commit, dispatch }, applyValue) {
+      console.log("[Vuex Action] updateApplyGlobalDaysOff:", applyValue);
+      commit("SET_UPDATING", true);
+      commit("SET_ERROR", null);
+      try {
+        const response =
+          await GlobalSettingsService.updateApplyGlobalDaysOff(applyValue);
+        commit("SET_APPLY_GLOBAL_DAYS_OFF", response.data.applyGlobalDaysOff);
+        dispatch(
+          "ui/showNotification",
+          {
+            type: "success",
+            message: "Apply global days off setting updated.",
+          },
+          { root: true },
+        );
+      } catch (error) {
+        const errorMessage =
+          error.response?.data?.message ||
+          error.message ||
+          "Failed to update setting";
+        commit("SET_ERROR", errorMessage);
+        dispatch(
+          "ui/showNotification",
+          {
+            type: "error",
+            message: errorMessage,
+          },
+          { root: true },
+        );
+        throw error;
+      } finally {
+        commit("SET_UPDATING", false);
+      }
+    },
+
+    async updateApplyGlobalExceptions({ commit, dispatch }, applyValue) {
+      console.log("[Vuex Action] updateApplyGlobalExceptions:", applyValue);
+      commit("SET_UPDATING", true);
+      commit("SET_ERROR", null);
+      try {
+        const response =
+          await GlobalSettingsService.updateApplyGlobalExceptions(applyValue);
+        commit(
+          "SET_APPLY_GLOBAL_EXCEPTIONS",
+          response.data.applyGlobalExceptions,
+        );
+        dispatch(
+          "ui/showNotification",
+          {
+            type: "success",
+            message: "Apply global exceptions setting updated.",
+          },
+          { root: true },
+        );
+      } catch (error) {
+        const errorMessage =
+          error.response?.data?.message ||
+          error.message ||
+          "Failed to update setting";
+        commit("SET_ERROR", errorMessage);
+        dispatch(
+          "ui/showNotification",
+          {
+            type: "error",
+            message: errorMessage,
+          },
+          { root: true },
+        );
+        throw error;
+      } finally {
+        commit("SET_UPDATING", false);
       }
     },
 
