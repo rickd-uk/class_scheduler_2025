@@ -6,6 +6,13 @@
         <div class="user-menu" v-if="isAuthenticated">
           <span>Welcome, {{ user?.username }}</span>
           <span v-if="isAdminUser" class="admin-badge">(Admin)</span>
+          <button
+            @click="showSettings = true"
+            class="btn btn-settings"
+            title="Settings"
+          >
+            ⚙️
+          </button>
           <button @click="handleLogout" class="btn btn-logout">Logout</button>
         </div>
       </div>
@@ -126,6 +133,17 @@
       v-if="store.state.ui.modals.classFormModal"
       :key="'classFormModal-' + store.state.ui.modals.classFormModal"
     />
+
+    <!-- Settings Modal -->
+    <div
+      v-if="showSettings"
+      class="modal-overlay"
+      @click="showSettings = false"
+    >
+      <div class="modal-content" @click.stop>
+        <UserSettingsPanel @close="showSettings = false" />
+      </div>
+    </div>
   </div>
 </template>
 
@@ -146,6 +164,7 @@ import WeeklySchedulePanel from "./components/panels/WeeklySchedulePanel.vue";
 import WeeklyViewPanel from "./components/panels/WeeklyViewPanel.vue";
 import DailySchedulePanel from "./components/panels/DailySchedulePanel.vue";
 import MonthlySchedulePanel from "./components/panels/MonthlySchedulePanel.vue";
+import UserSettingsPanel from "./components/user/UserSettingsPanel.vue";
 import GlobalSettingsPanel from "./components/panels/GlobalSettingsPanel.vue";
 
 // Modal Imports (ensure paths are correct if these are in a subfolder like 'modals')
@@ -169,6 +188,7 @@ const router = useRouter();
 // --- Component State ---
 const activeTab = ref("daily"); // Default tab
 const showLogin = ref(true); // Initially show login form
+const showSettings = ref(false);
 
 // --- Computed Properties ---
 const isAuthenticated = computed(() => store.getters["auth/isAuthenticated"]);
@@ -446,5 +466,54 @@ const handleLoginToggleFromDisabled = () => {
 
 .toggle-link:hover {
   color: var(--primary-dark);
+}
+
+.btn-settings {
+  background-color: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: none;
+  padding: 0.35rem 0.75rem;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  font-size: 1.2rem;
+  transition: background-color 0.2s ease;
+}
+
+.btn-settings:hover {
+  background-color: rgba(255, 255, 255, 0.3);
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 1rem;
+}
+
+.modal-content {
+  width: 100%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+  background-color: white;
+  border-radius: var(--border-radius);
+}
+
+@media (max-width: 768px) {
+  .modal-overlay {
+    padding: 0;
+  }
+  .modal-content {
+    max-width: 100%;
+    max-height: 100vh;
+    border-radius: 0;
+  }
 }
 </style>

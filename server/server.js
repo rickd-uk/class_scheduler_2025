@@ -15,6 +15,7 @@ const appliedExceptionsRoutes = require("./routes/appliedExceptionsRoutes");
 const globalSettingsRoutes = require("./routes/globalSettingsRoutes");
 const globalDaysOffRoutes = require("./routes/globalDaysOffRoutes");
 const globalAppliedExceptionsRoutes = require("./routes/globalAppliedExceptionsRoutes");
+const userRoutes = require("./routes/userRoutes.js");
 
 // --- Middleware Imports ---
 const authenticateToken = require("./middleware/authenticateToken");
@@ -65,6 +66,7 @@ app.use("/api/applied-exceptions", authenticateToken, appliedExceptionsRoutes);
 app.use("/api/global-days-off", globalDaysOffRoutes);
 app.use("/api/global-applied-exceptions", globalAppliedExceptionsRoutes);
 app.use("/api/global-settings", globalSettingsRoutes);
+app.use("/api/users", authenticateToken, userRoutes);
 
 // --- Error Handling Middleware (Should be last) ---
 app.use((err, req, res, next) => {

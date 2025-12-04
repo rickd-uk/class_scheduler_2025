@@ -14,6 +14,7 @@ import ui from "./modules/ui";
 import globalDaysOff from "./modules/globalDaysOff";
 import globalAppliedExceptions from "./modules/globalAppliedExceptions";
 import globalSettings from "./modules/globalSettings";
+import user from "./modules/user";
 
 // Log registered modules for debugging purposes
 console.log("Registering Vuex modules:", {
@@ -25,7 +26,11 @@ console.log("Registering Vuex modules:", {
   daysOff,
   schoolYear,
   ui,
-  exceptionPatterns, // <-- Add to log
+  exceptionPatterns,
+  globalDaysOff,
+  globalAppliedExceptions,
+  globalSettings,
+  user,
 });
 
 export default createStore({
@@ -40,9 +45,10 @@ export default createStore({
     schoolYear,
     ui,
 
-    // ← REGISTER YOUR GLOBAL MODULES HERE
+    // REGISTER YOUR GLOBAL MODULES HERE
     globalDaysOff,
     globalAppliedExceptions,
     globalSettings,
+    user,
   },
 });

@@ -1,69 +1,35 @@
 #!/bin/bash
-# A unified script to manage the Class Scheduler development and production environments.
-# --- Helper function to navigate to project root ---
-cd_to_project_root() {
-  # This finds the directory where the script is located and goes up one level.
-  cd "$(dirname "$0")/.." || exit
-}
-# --- Main script logic ---
-cd_to_project_root
-COMMAND="$1"
-case $COMMAND in
-  start:dev)
-    echo "--- 🚀 Starting DEVELOPMENT environment (Client + Server + DB)... ---"
-    podman-compose -f podman-compose.dev.yml up --build -d
-    echo "✅ Development containers are starting. Use './scripts/manage.sh logs:dev' to see their status."
-    ;;
-  start:prod)
-    echo "--- 🚀 Starting PRODUCTION environment (Client + Server + DB)... ---"
-    podman-compose -f podman-compose.yml up --build -d
-    echo "✅ Production containers are starting. Use './scripts/manage.sh logs:prod' to see their status."
-    ;;
-  stop:dev)
-    echo "--- 🛑 Stopping DEVELOPMENT environment... ---"
-    podman-compose -f podman-compose.dev.yml down
-    echo "--- ✅ Development containers stopped. ---"
-    ;;
-  stop:prod)
-    echo "--- 🛑 Stopping PRODUCTION environment... ---"
-    podman-compose -f podman-compose.yml down
-    echo "--- ✅ Production containers stopped. ---"
-    ;;
-  restart:dev)
-    echo "--- 🔄 Restarting DEVELOPMENT environment... ---"
-    podman-compose -f podman-compose.dev.yml down
-    echo "--- Containers stopped, now rebuilding and starting... ---"
-    podman-compose -f podman-compose.dev.yml up --build -d
-    echo "✅ Development containers restarted. Use './scripts/manage.sh logs:dev' to see their status."
-    ;;
-  restart:prod)
-    echo "--- 🔄 Restarting PRODUCTION environment... ---"
-    podman-compose -f podman-compose.yml down
-    echo "--- Containers stopped, now rebuilding and starting... ---"
-    podman-compose -f podman-compose.yml up --build -d
-    echo "✅ Production containers restarted. Use './scripts/manage.sh logs:prod' to see their status."
-    ;;
-  logs:dev)
-    echo "--- 🪵 Viewing real-time logs for the DEVELOPMENT server... (Press Ctrl+C to stop) ---"
-    podman-compose -f podman-compose.dev.yml logs -f server
-    ;;
-  logs:prod)
-    echo "--- 🪵 Viewing real-time logs for the PRODUCTION server... (Press Ctrl+C to stop) ---"
-    podman-compose -f podman-compose.yml logs -f server
-    ;;
-  *)
-    echo "Usage: ./scripts/manage.sh [command]"
-    echo ""
-    echo "Development Commands (For your local machine):"
-    echo "  start:dev        - Builds and starts all services for local development with live-reloading."
-    echo "  stop:dev         - Stops and removes all development containers."
-    echo "  restart:dev      - Stops, rebuilds, and restarts all development containers."
-    echo "  logs:dev         - Shows the real-time logs for the development backend server."
-    echo ""
-    echo "Production Commands (For your VPS):"
-    echo "  start:prod       - Builds and starts all services for production."
-    echo "  stop:prod        - Stops and removes all production containers."
-    echo "  restart:prod     - Stops, rebuilds, and restarts all production containers."
-    echo "  logs:prod        - Shows the real-time logs for the production backend server."
-    ;;
-esac
+# Bulletproof dev environment starter
+# This GUARANTEES a clean start every time
+
+cd ~/Documents/D/PRJ/WEB/scheduler
+
+echo "🧹 Step 1: Cleaning up old containers..."
+podman-compose -f podman-compose.dev.yml down -v --remove-orphans 2>/dev/null || true
+podman stop $(podman ps -aq) 2>/dev/null || true
+podman rm -f $(podman ps -aq) 2>/dev/null || true
+
+echo "🔓 Step 2: Freeing ports..."
+sudo fuser -k 3001/tcp 2>/dev/null || true
+sudo fuser -k 5173/tcp 2>/dev/null || true
+sudo fuser -k 5433/tcp 2>/dev/null || true
+
+echo "🧹 Step 3: Cleaning podman cache..."
+podman network prune -f 2>/dev/null || true
+
+echo "⏳ Step 4: Waiting for cleanup..."
+sleep 3
+
+echo "🚀 Step 5: Starting fresh containers..."
+podman-compose -f podman-compose.dev.yml up -d
+
+echo ""
+echo "✅ Done! Your containers:"
+podman ps
+
+echo ""
+echo "🌐 Access your app:"
+echo "  Frontend: http://localhost:5173"
+echo "  Backend:  http://localhost:3001"
+echo ""
+echo "📋 View logs: podman-compose -f podman-compose.dev.yml logs -f"
