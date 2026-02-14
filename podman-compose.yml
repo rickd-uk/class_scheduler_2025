@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  # Backend Service (Express + Node.js)
+  server:
+    build: ./server
+    container_name: scheduler-server
+    command: ["sh", "-c", "yarn install && yarn start"] # Production start command
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=${PORT}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=${POSTGRES_PORT}
+      - DATABASE_URL=${DATABASE_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      - CLIENT_URL=${CLIENT_URL}
+    depends_on:
+      - db
+    networks:
+      - scheduler-network
+
+  # Frontend Service (Vue + Nginx)
+  client:
+    build: ./client # Builds the final 'production' stage from Dockerfile
+    container_name: scheduler-client
+    restart: unless-stopped
+    ports:
+      - "8080:80" # Nginx serves on standard web port 80
+    depends_on:
+      - server
+    networks:
+      - scheduler-network
+
+  # Database Service (PostgreSQL)
+  db:
+    image: postgres:15
+    container_name: scheduler-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    networks:
+      - scheduler-network
+
+networks:
+  scheduler-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
